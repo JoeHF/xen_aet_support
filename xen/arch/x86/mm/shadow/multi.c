@@ -2818,23 +2818,23 @@ static inline void set_aet_magic(mfn_t sl1mfn) {
 		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT) && (sl1p->l1 & SH_L1E_AET_MAGIC) == 0) {
 			sl1p->l1 |= SH_L1E_AET_MAGIC;
 			set_aet_magic_count++;
-			printk("[joe] %p set aet:%lx reversed/set:%llu/%llu\n",
-					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
 		}
 	});
 }
 
-/*
-static inline void reserve_all_aet_magic(sl1mfn) {
+
+static inline void reverse_all_aet_magic(mfn_t sl1mfn) {
 	shadow_l1e_t *sl1p;
 	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
 		if (sh_l1e_is_aet_magic(*sl1p)) {
 			sl1p->l1 &= (~SH_L1E_AET_MAGIC);
-			printk("[joe] %p revert aet:%lx\n", sl1p, sl1p->l1);
+			reversed_aet_magic_count++;
+//			printk("[joe] %p reverse all aet magic:%lx reversed/set:%llu/%llu\n",
+//					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
 		}
 	});
 }
-*/
+
 #endif
 #endif
 /**************************************************************************/
@@ -3161,6 +3161,10 @@ static int sh_page_fault(struct vcpu *v,
 #ifdef AET_PF
 	if (is_aet_pf == 1) {
 		printk("[joe] find aet magic\n");
+		reverse_all_aet_magic(sl1mfn);
+		printk("[joe] reversed/set:%llu/%llu\n",
+				reversed_aet_magic_count, set_aet_magic_count);
+		/*
 		{
 			shadow_l1e_t *sp;
 			void *map;
@@ -3169,16 +3173,20 @@ static int sh_page_fault(struct vcpu *v,
 			if (sh_l1e_is_aet_magic(*sp)) {
 				sp->l1 &= (~SH_L1E_AET_MAGIC);
 				reversed_aet_magic_count++;
-				printk("[joe] %p revert aet:%lx reversed/set:%llu/%llu\n", sp, sp->l1, reversed_aet_magic_count, set_aet_magic_count);	
+				printk("[joe] %p revert aet:%lx count:%llu reversed/set:%llu/%llu\n", sp, sp->l1, count, reversed_aet_magic_count, set_aet_magic_count);	
 			}
 		}
+		*/
 	}
 	else {
 		count++;
-		if (count == 10) {
+		if (count % 10000 == 100) {
 			printk("count:%llu\n", count);
 			printk("[joe] set aet magic\n");
 			set_aet_magic(sl1mfn);
+			printk("[joe] reversed/set:%llu/%llu\n",
+					reversed_aet_magic_count, set_aet_magic_count);
+
 		}
 	}
 #endif
