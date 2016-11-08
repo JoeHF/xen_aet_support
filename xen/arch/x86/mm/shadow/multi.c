@@ -2799,6 +2799,32 @@ static inline void trace_shadow_emulate(guest_l1e_t gl1e, unsigned long va)
     }
 }
 
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+
+#define SH_L1E_AET_MAGIC 0xffffff0000000400ULL
+
+unsigned long long count = 0;
+unsigned long long set_aet_magic_count = 0;
+unsigned long long reversed_aet_magic_count = 0;
+
+static inline int sh_l1e_is_aet_magic(shadow_l1e_t sl1e) {
+	return ((sl1e.l1 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
+}
+
+static inline void set_aet_magic(mfn_t sl1mfn) {
+	shadow_l1e_t *sl1p;
+	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
+		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT) && (sl1p->l1 & SH_L1E_AET_MAGIC) == 0) {
+			set_aet_magic_count++;
+			printk("[joe] %p set aet:%lx reversed/set:%llu/%llu\n",
+					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
+		}
+	});
+}
+
+#endif
+#endif
 /**************************************************************************/
 /* Entry points into the shadow code */
 
@@ -2836,7 +2862,21 @@ static int sh_page_fault(struct vcpu *v,
     SHADOW_PRINTK("d:v=%u:%u va=%#lx err=%u, rip=%lx\n",
                   v->domain->domain_id, v->vcpu_id, va, regs->error_code,
                   regs->eip);
-
+/*
+#ifdef AET_LOG
+	if (v->domain->domain_id == 1) {
+#if GUEST_PAGING_LEVELS == 4
+		printk("guest paging levels:4\n");
+#endif
+#if GUEST_PAGING_LEVELS == 3
+		printk("guest paging levels:3\n");
+#endif
+#if GUEST_PAGING_LEVELS == 2
+		printk("guest paging levels:2\n");
+#endif
+	}
+#endif
+*/
     perfc_incr(shadow_fault);
 
     if ( regs->error_code & PFEC_write_access )
@@ -3091,6 +3131,27 @@ static int sh_page_fault(struct vcpu *v,
     /* Acquire the shadow.  This must happen before we figure out the rights 
      * for the shadow entry, since we might promote a page here. */
     ptr_sl1e = shadow_get_and_create_l1e(v, &gw, &sl1mfn, ft);
+
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+#ifdef AET_LOG
+	count++;
+	if (count == 10) {
+		printk("count:%llu\n", count);
+		printk("[joe] set aet magic\n");
+		set_aet_magic(sl1mfn);
+	}
+#endif
+#endif
+#endif
+
+#if GEUST_PAGING_LEVELS == 4
+#ifdef AET_PF
+#ifdef AET_LOG
+#endif
+#endif
+#endif
+
     if ( unlikely(ptr_sl1e == NULL) ) 
     {
         /* Couldn't get the sl1e!  Since we know the guest entries

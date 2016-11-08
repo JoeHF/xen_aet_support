@@ -48,3 +48,10 @@ CFLAGS += -fno-asynchronous-unwind-tables
 ifneq ($(call cc-option,$(CC),-fvisibility=hidden,n),n)
 CFLAGS += -DGCC_HAS_VISIBILITY_ATTRIBUTE
 endif
+
+# by houfang
+AET_SAMPLING = y
+ifeq ($(AET_SAMPLING), y)
+	CFLAGS += -DAET_PF -DAET_LOG
+endif
+
