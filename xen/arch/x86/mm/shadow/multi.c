@@ -2816,6 +2816,7 @@ static inline void set_aet_magic(mfn_t sl1mfn) {
 	shadow_l1e_t *sl1p;
 	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
 		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT) && (sl1p->l1 & SH_L1E_AET_MAGIC) == 0) {
+			sl1p->l1 |= SH_L1E_AET_MAGIC;
 			set_aet_magic_count++;
 			printk("[joe] %p set aet:%lx reversed/set:%llu/%llu\n",
 					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
@@ -2823,6 +2824,17 @@ static inline void set_aet_magic(mfn_t sl1mfn) {
 	});
 }
 
+/*
+static inline void reserve_all_aet_magic(sl1mfn) {
+	shadow_l1e_t *sl1p;
+	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
+		if (sh_l1e_is_aet_magic(*sl1p)) {
+			sl1p->l1 &= (~SH_L1E_AET_MAGIC);
+			printk("[joe] %p revert aet:%lx\n", sl1p, sl1p->l1);
+		}
+	});
+}
+*/
 #endif
 #endif
 /**************************************************************************/
@@ -2857,6 +2869,11 @@ static int sh_page_fault(struct vcpu *v,
     };
 #if SHADOW_OPTIMIZATIONS & SHOPT_FAST_EMULATION
     int fast_emul = 0;
+#endif
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+	int is_aet_pf = 0;
+#endif
 #endif
 
     SHADOW_PRINTK("d:v=%u:%u va=%#lx err=%u, rip=%lx\n",
@@ -2988,6 +3005,14 @@ static int sh_page_fault(struct vcpu *v,
         }
         else
         {
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+			if (sh_l1e_is_aet_magic(sl1e)) {
+				is_aet_pf = 1;
+				goto page_fault_slow_path;
+			}
+#endif
+#endif
             /* This should be exceptionally rare: another vcpu has fixed
              * the tables between the fault and our reading the l1e. 
              * Retry and let the hardware give us the right fault next time. */
@@ -3134,14 +3159,28 @@ static int sh_page_fault(struct vcpu *v,
 
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-#ifdef AET_LOG
-	count++;
-	if (count == 10) {
-		printk("count:%llu\n", count);
-		printk("[joe] set aet magic\n");
-		set_aet_magic(sl1mfn);
+	if (is_aet_pf == 1) {
+		printk("[joe] find aet magic\n");
+		{
+			shadow_l1e_t *sp;
+			void *map;
+			map = sh_map_domain_page(sl1mfn);
+			sp = map + ((unsigned long)ptr_sl1e & (PAGE_SIZE - 1));
+			if (sh_l1e_is_aet_magic(*sp)) {
+				sp->l1 &= (~SH_L1E_AET_MAGIC);
+				reversed_aet_magic_count++;
+				printk("[joe] %p revert aet:%lx reversed/set:%llu/%llu\n", sp, sp->l1, reversed_aet_magic_count, set_aet_magic_count);	
+			}
+		}
 	}
-#endif
+	else {
+		count++;
+		if (count == 10) {
+			printk("count:%llu\n", count);
+			printk("[joe] set aet magic\n");
+			set_aet_magic(sl1mfn);
+		}
+	}
 #endif
 #endif
 
