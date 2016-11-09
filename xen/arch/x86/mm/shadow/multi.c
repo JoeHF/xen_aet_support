@@ -2818,6 +2818,7 @@ static inline void reverse_all_aet_magic(struct vcpu *v) {
 	shadow_l3e_t *sl3e;
 	shadow_l2e_t *sl2e;
 	shadow_l1e_t *sl1e;
+	int total1 = 0, total2 = 0;
 	sl4mfn = pagetable_get_mfn(current->arch.shadow_table[0]);
 	SHADOW_FOREACH_L4E(sl4mfn, sl4e, 0, 0, current->domain, {
 		if (shadow_l4e_get_flags(*sl4e) & _PAGE_PRESENT) {
@@ -2829,9 +2830,13 @@ static inline void reverse_all_aet_magic(struct vcpu *v) {
 						if (shadow_l2e_get_flags(*sl2e) & _PAGE_PRESENT) {
 							sl1mfn = shadow_l2e_get_mfn(*sl2e);
 							SHADOW_FOREACH_L1E(sl1mfn, sl1e, 0, 0, {
+								if (sh_l1e_is_aet_magic(*sl1e)) {
+									total1++;
+								}
 								if (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT) {
 									if (sh_l1e_is_aet_magic(*sl1e)) {
-										printk("sl1e:%p %lx\n", sl1e, sl1e->l1);
+										total2++;
+				//						printk("sl1e:%p %lx\n", sl1e, sl1e->l1);
 										sl1e->l1 &= (~SH_L1E_AET_MAGIC);
 										reversed_aet_magic_count++;
 									}
@@ -2843,6 +2848,7 @@ static inline void reverse_all_aet_magic(struct vcpu *v) {
 			});
 		}
 	});	
+	//printk("[joe] total1:%d total2:%d\n", total1, total2);
 }
 
 static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e) {
@@ -2862,6 +2868,8 @@ static inline void reverse_l1_aet_magic(mfn_t sl1mfn) {
 	shadow_l1e_t *sl1p;
 	printk("[joe] reverse_aet_magic mfn:%lx\n", sl1mfn);
 	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
+//		printk("[joe] %p aet magic:%lx\n",
+//					sl1p, sl1p->l1);
 		if (sh_l1e_is_aet_magic(*sl1p)) {
 			sl1p->l1 &= (~SH_L1E_AET_MAGIC);
 			reversed_aet_magic_count++;
@@ -3216,7 +3224,7 @@ static int sh_page_fault(struct vcpu *v,
 	}
 	else {
 		count++;
-		if (count % 10000 == 100 && reversed_aet_magic_count == set_aet_magic_count) {
+		if (count % 10000 == 100/* && reversed_aet_magic_count == set_aet_magic_count*/) {
 			printk("count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
 			printk("[joe] set aet magic\n");
 			set_aet_magic(sl1mfn, ptr_sl1e);
@@ -4054,10 +4062,10 @@ sh_update_cr3(struct vcpu *v, int do_locking)
 //	printk("update cr3 guest_vtable:%lx\n", current->arch.shadow_table[0].pfn);
 /*
 	if (reversed_aet_magic_count != set_aet_magic_count) {
-		printk("[joe] in sh_update_cr3\n");
+		//printk("[joe] in sh_update_cr3\n");
 		reverse_all_aet_magic(current);
-		printk("[joe] reversed/set:%llu/%llu\n",
-				reversed_aet_magic_count, set_aet_magic_count);
+		//printk("[joe] sh_update_cr3 reversed/set:%llu/%llu\n",
+				//reversed_aet_magic_count, set_aet_magic_count);
 	
 	}
 */
@@ -4434,6 +4442,16 @@ int sh_rm_write_access_from_l1(struct vcpu *v, mfn_t sl1mfn,
     
     SHADOW_FOREACH_L1E(sl1mfn, sl1e, 0, done, 
     {
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+		if (sh_l1e_is_aet_magic(*sl1e)) {
+			reversed_aet_magic_count++;
+//			printk("[joe] in sh rm write access from l1\n");
+//			printk("sl1e:%p :%lx\n", sl1e, sl1e->l1);
+			sl1e->l1 &= (~SH_L1E_AET_MAGIC);
+		}
+#endif
+#endif
         flags = shadow_l1e_get_flags(*sl1e);
         if ( (flags & _PAGE_PRESENT) 
              && (flags & _PAGE_RW) 
