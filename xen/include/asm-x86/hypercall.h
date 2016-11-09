@@ -110,4 +110,9 @@ extern int
 arch_compat_vcpu_op(
     int cmd, struct vcpu *v, XEN_GUEST_HANDLE_PARAM(void) arg);
 
+extern unsigned long
+do_xc_reserved_op(
+	unsigned long arg1,
+	unsigned long arg2);
+
 #endif /* __ASM_X86_HYPERCALL_H__ */

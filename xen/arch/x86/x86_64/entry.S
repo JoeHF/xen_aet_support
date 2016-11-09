@@ -764,6 +764,7 @@ ENTRY(hypercall_table)
         .quad do_domctl
         .quad do_kexec_op
         .quad do_tmem_op
+		.quad do_xc_reserved_op
         .rept __HYPERVISOR_arch_0-((.-hypercall_table)/8)
         .quad do_ni_hypercall
         .endr

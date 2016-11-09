@@ -2917,6 +2917,7 @@ static int sh_page_fault(struct vcpu *v,
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
 	int is_aet_pf = 0;
+	unsigned long long mem_counter;
 #endif
 #endif
 
@@ -3204,6 +3205,7 @@ static int sh_page_fault(struct vcpu *v,
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
 	if (is_aet_pf == 1) {
+		mem_counter = pmu_mem_return(0, 0);
 		printk("[joe] find aet magic count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
 		reverse_l1_aet_magic(sl1mfn);
 		printk("[joe] after reverse reversed/set:%llu/%llu\n",
