@@ -50,6 +50,9 @@
 #include <asm/nmi.h>
 #include <asm/alternative.h>
 
+#ifdef AET_PF
+#include <public/aet.h>
+#endif
 /* opt_nosmp: If true, secondary processors are ignored. */
 static bool_t __initdata opt_nosmp;
 boolean_param("nosmp", opt_nosmp);
@@ -1143,6 +1146,10 @@ void __init noreturn __start_xen(unsigned long mbi_p)
     BUILD_BUG_ON(MACH2PHYS_VIRT_END   != RO_MPT_VIRT_END);
 
     init_frametable();
+
+#ifdef AET_PF
+	aet_init();
+#endif
 
     if ( !acpi_boot_table_init_done )
         acpi_boot_table_init();

@@ -2639,12 +2639,29 @@ void vmx_handle_EOI_induced_exit(struct vlapic *vlapic, int vector)
     vlapic_handle_EOI_induced_exit(vlapic, vector);
 }
 
+//unsigned long long count = 0;
+
+//typedef l4_pgentry_t shadow_l4e_t;
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
     unsigned long exit_qualification, exit_reason, idtv_info, intr_info = 0;
     unsigned int vector = 0;
     struct vcpu *v = current;
 
+	// add by houfang
+	/*
+	mfn_t sl4mfn;
+	shadow_l4e_t *sl4p;
+	if (v->domain->domain_id == 1) {
+		count++;
+		if (count == 10000) {
+			sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+			SHADOW_FOREACH_L4E(sl4mfn, sl4p, 0, 0, v->domain, {
+				printk("[joe] vmx_vmexit_handler sl4p:%p %lx\n", sl4p, sl4p->l4);
+			});
+		}
+	}
+	*/
     __vmread(GUEST_RIP,    &regs->rip);
     __vmread(GUEST_RSP,    &regs->rsp);
     __vmread(GUEST_RFLAGS, &regs->rflags);

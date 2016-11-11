@@ -38,6 +38,7 @@
 #include <asm/shadow.h>
 #include <xen/numa.h>
 #include "private.h"
+#include <public/aet.h>
 
 DEFINE_PER_CPU(uint32_t,trace_shadow_path_flags);
 

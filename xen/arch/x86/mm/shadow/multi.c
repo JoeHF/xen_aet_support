@@ -882,6 +882,9 @@ shadow_put_page_from_l1e(shadow_l1e_t sl1e, struct domain *d)
 }
 
 #if GUEST_PAGING_LEVELS >= 4
+#ifdef AET_PF
+#define SH_L1E_AET_MAGIC 0xffffff0000000400ULL
+#endif
 static int shadow_set_l4e(struct vcpu *v, 
                           shadow_l4e_t *sl4e, 
                           shadow_l4e_t new_sl4e, 
@@ -889,10 +892,39 @@ static int shadow_set_l4e(struct vcpu *v,
 {
     int flags = 0, ok;
     shadow_l4e_t old_sl4e;
+#ifdef AET_PF
+	shadow_l4e_t *sl4p;
+	shadow_l4e_t *_sp;
+	int _i;
+#endif
     paddr_t paddr;
     ASSERT(sl4e != NULL);
     old_sl4e = *sl4e;
-
+#ifdef AET_PF
+	if ((sl4e->l4 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC) {
+    	_sp = sh_map_domain_page((sl4mfn));                  
+    	for ( _i = 0; _i < SHADOW_L4_PAGETABLE_ENTRIES; _i++ )              
+    	{                                                                   
+            sl4p = _sp + _i;                                         
+            if ( shadow_l4e_get_flags(*(sl4p)) & _PAGE_PRESENT )       
+			{
+				if (sl4p->l4 == sl4e->l4) {
+					sl4p->l4 &= (~SH_L1E_AET_MAGIC);
+					printk("[joe] reverse in shadow_set_l4e sl4p:%p %lx\n", sl4p, sl4p->l4);
+				}
+			}
+        }                                                               
+    	sh_unmap_domain_page(_sp);    
+/*
+		SHADOW_FOREACH_L4E(sl4mfn, sl4p, 0, 0, v->domain, {
+			if (sl4p->l4 == sl4e->l4) {
+				sl4p->l4 &= (~SH_L1E_AET_MAGIC);
+				printk("[joe] reverse in shadow_set_l4e sl4p:%p %lx\n", sl4p, sl4p->l4);
+			}
+		});
+*/		printk("[joe] shadow_set_l4e sl4e:%p %lx new_sl4e:%lx\n", sl4e, sl4e->l4, new_sl4e.l4);
+	}
+#endif
     if ( old_sl4e.l4 == new_sl4e.l4 ) return 0; /* Nothing to do */
     
     paddr = ((((paddr_t)mfn_x(sl4mfn)) << PAGE_SHIFT) 
@@ -1650,6 +1682,110 @@ sh_make_monitor_table(struct vcpu *v)
  * more levels than the guest, the upper levels are always fixed and do not 
  * reflect any information from the guest, so we do not use these functions 
  * to access them. */
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+
+
+int is_aet_pf; 
+unsigned long long count = 0;
+unsigned long long set_aet_magic_count = 0;
+unsigned long long reversed_aet_magic_count = 0;
+unsigned long long l4_aet_magic_count = 0;
+
+static inline void reverse_l4_aet_magic(walk_t *gw, mfn_t sl4mfn) {
+	shadow_l4e_t *sl4p;
+	sl4p = sh_map_domain_page(sl4mfn);
+	sl4p += shadow_l4_table_offset(gw->va);
+	printk("[joe] reverse:l4:%p %lx\n", sl4p, sl4p->l4);
+	sl4p->l4 &= (~SH_L1E_AET_MAGIC);
+	sh_unmap_domain_page(sl4p);
+}
+
+static inline int sh_l1e_is_aet_magic(shadow_l1e_t sl1e) {
+	return ((sl1e.l1 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
+}
+
+static inline int sh_l2e_is_aet_magic(shadow_l2e_t sl2e) {
+	return ((sl2e.l2 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
+}
+
+static inline int sh_l3e_is_aet_magic(shadow_l3e_t sl3e) {
+	return ((sl3e.l3 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
+}
+
+static inline int sh_l4e_is_aet_magic(shadow_l4e_t sl4e) {
+	return ((sl4e.l4 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
+}
+
+static inline void reverse_all_aet_magic(struct vcpu *v) {
+	mfn_t sl4mfn, sl3mfn, sl2mfn, sl1mfn;
+	shadow_l4e_t *sl4e;
+	shadow_l3e_t *sl3e;
+	shadow_l2e_t *sl2e;
+	shadow_l1e_t *sl1e;
+	int total1 = 0, total2 = 0;
+	sl4mfn = pagetable_get_mfn(current->arch.shadow_table[0]);
+	SHADOW_FOREACH_L4E(sl4mfn, sl4e, 0, 0, current->domain, {
+		if (shadow_l4e_get_flags(*sl4e) & _PAGE_PRESENT) {
+			sl3mfn = shadow_l4e_get_mfn(*sl4e);
+			SHADOW_FOREACH_L3E(sl3mfn, sl3e, 0, 0, {
+				if (shadow_l3e_get_flags(*sl3e) & _PAGE_PRESENT) {
+					sl2mfn = shadow_l3e_get_mfn(*sl3e);
+					SHADOW_FOREACH_L2E(sl2mfn, sl2e, 0, 0, current->domain, {
+						if (shadow_l2e_get_flags(*sl2e) & _PAGE_PRESENT) {
+							sl1mfn = shadow_l2e_get_mfn(*sl2e);
+							SHADOW_FOREACH_L1E(sl1mfn, sl1e, 0, 0, {
+								if (sh_l1e_is_aet_magic(*sl1e)) {
+									total1++;
+								}
+								if (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT) {
+									if (sh_l1e_is_aet_magic(*sl1e)) {
+										total2++;
+				//						printk("sl1e:%p %lx\n", sl1e, sl1e->l1);
+										sl1e->l1 &= (~SH_L1E_AET_MAGIC);
+										reversed_aet_magic_count++;
+									}
+								}
+							});
+						}
+					});
+				}
+			});
+		}
+	});	
+	//printk("[joe] total1:%d total2:%d\n", total1, total2);
+}
+
+static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e) {
+	shadow_l1e_t *sl1p;
+	printk("[joe] set_aet_magic mfn:%lx\n", sl1mfn);
+	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
+		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT) && (sl1p->l1 & SH_L1E_AET_MAGIC) == 0 && sl1p->l1 != ptr_sl1e->l1) {
+			sl1p->l1 |= SH_L1E_AET_MAGIC;
+			set_aet_magic_count++;
+//			printk("[joe] %p set aet magic:%lx reversed/set:%llu/%llu\n",
+//					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
+		}
+	});
+}
+
+static inline void reverse_l1_aet_magic(mfn_t sl1mfn) {
+	shadow_l1e_t *sl1p;
+	printk("[joe] reverse_aet_magic mfn:%lx\n", sl1mfn);
+	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
+//		printk("[joe] %p aet magic:%lx\n",
+//					sl1p, sl1p->l1);
+		if (sh_l1e_is_aet_magic(*sl1p)) {
+			sl1p->l1 &= (~SH_L1E_AET_MAGIC);
+			reversed_aet_magic_count++;
+//			printk("[joe] %p reverse all aet magic:%lx reversed/set:%llu/%llu\n",
+//					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
+		}
+	});
+}
+
+#endif
+#endif
 
 #if GUEST_PAGING_LEVELS >= 4
 static shadow_l4e_t * shadow_get_and_create_l4e(struct vcpu *v, 
@@ -1670,10 +1806,52 @@ static shadow_l3e_t * shadow_get_and_create_l3e(struct vcpu *v,
 {
     mfn_t sl4mfn;
     shadow_l4e_t *sl4e;
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+/*
+	shadow_l4e_t *sl4p;
+	shadow_l4e_t *sl4e_p;
+	int done = 0;
+*/	
+#endif
+#endif
     if ( !mfn_valid(gw->l3mfn) ) return NULL; /* No guest page. */
     /* Get the l4e */
     sl4e = shadow_get_and_create_l4e(v, gw, &sl4mfn);
     ASSERT(sl4e != NULL);
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+/*
+	//printk("[joe] shadow_get_and_create_l3e sl4e:%p %lx va:%lx\n", sl4e, sl4e->l4, gw->va);
+	if (sh_l4e_is_aet_magic(*sl4e)) {
+		reverse_l4_aet_magic(gw, sl4mfn);
+		printk("[joe] l4e! after reverse aet magic:sl4e:%p %lx\n", sl4e, sl4e->l4);
+	}
+	else {
+		//if (count < 1000) {
+			sl4e_p = sh_map_domain_page(sl4mfn);
+			sl4e_p += shadow_l4_table_offset(gw->va);
+			SHADOW_FOREACH_L4E(sl4mfn, sl4p, 0, 0, v->domain, {
+				int flags = shadow_l4e_get_flags(*sl4p);
+	//			printk("[joe] sl4p:%p %lx sl4e_p:%p %lx offset:%lx va:%lx\n", sl4p, sl4p->l4, sl4e_p, sl4e_p->l4, shadow_l4_table_offset(gw->va), gw->va);
+				if ((flags & _PAGE_PRESENT) && (flags & _PAGE_USER)) {
+		//			printk("[joe] get all l4, count:%llu sl4e:%p %lx sl4p:%p %lx\n", count, sl4e, sl4e->l4, sl4p, sl4p->l4);
+					if (sl4e->l4 != sl4p->l4) {
+						printk("[joe] should set sl4e:%p %lx sl4e_p:%p %lx sl4p:%p %lx count:%llx va:%lx\n", sl4e, sl4e->l4, sl4e_p, sl4e_p->l4, sl4p, sl4p->l4, l4_aet_magic_count, gw->va);
+						sl4p->l4 |= SH_L1E_AET_MAGIC;
+						l4_aet_magic_count++;
+						done = 1;
+					}
+				}
+			});
+		//}
+		if (done == 1) {
+			printk("[joe] l4 after set aet magic:sl4e:%p %lx\n", sl4e, sl4e->l4);
+		}
+	}
+*/
+#endif
+#endif
     if ( shadow_l4e_get_flags(*sl4e) & _PAGE_PRESENT ) 
     {
         *sl3mfn = shadow_l4e_get_mfn(*sl4e);
@@ -1692,7 +1870,21 @@ static shadow_l3e_t * shadow_get_and_create_l3e(struct vcpu *v,
         }
         /* Install the new sl3 table in the sl4e */
         l4e_propagate_from_guest(v, gw->l4e, *sl3mfn, &new_sl4e, ft);
+#ifdef AET_PF
+/*
+		if (done == 1) {
+			printk("[joe] before shadow set l4e sl4e:%p %lx new_sl4e:%lx\n", sl4e, sl4e->l4, new_sl4e.l4);
+		}
+*/
+#endif
         r = shadow_set_l4e(v, sl4e, new_sl4e, sl4mfn);
+#ifdef AET_PF
+/*
+		if (done == 1) {
+			printk("[joe] after shadow set l4e sl4e:%p %lx new_sl4e:%lx\n", sl4e, sl4e->l4, new_sl4e.l4);
+		}
+*/
+#endif
         ASSERT((r & SHADOW_SET_FLUSH) == 0);
         if ( r & SHADOW_SET_ERROR )
             return NULL;
@@ -2801,83 +2993,14 @@ static inline void trace_shadow_emulate(guest_l1e_t gl1e, unsigned long va)
 
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-
+/*
 #define SH_L1E_AET_MAGIC 0xffffff0000000400ULL
 
+int is_aet_pf; 
 unsigned long long count = 0;
 unsigned long long set_aet_magic_count = 0;
 unsigned long long reversed_aet_magic_count = 0;
-
-static inline int sh_l1e_is_aet_magic(shadow_l1e_t sl1e) {
-	return ((sl1e.l1 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
-}
-
-static inline void reverse_all_aet_magic(struct vcpu *v) {
-	mfn_t sl4mfn, sl3mfn, sl2mfn, sl1mfn;
-	shadow_l4e_t *sl4e;
-	shadow_l3e_t *sl3e;
-	shadow_l2e_t *sl2e;
-	shadow_l1e_t *sl1e;
-	int total1 = 0, total2 = 0;
-	sl4mfn = pagetable_get_mfn(current->arch.shadow_table[0]);
-	SHADOW_FOREACH_L4E(sl4mfn, sl4e, 0, 0, current->domain, {
-		if (shadow_l4e_get_flags(*sl4e) & _PAGE_PRESENT) {
-			sl3mfn = shadow_l4e_get_mfn(*sl4e);
-			SHADOW_FOREACH_L3E(sl3mfn, sl3e, 0, 0, {
-				if (shadow_l3e_get_flags(*sl3e) & _PAGE_PRESENT) {
-					sl2mfn = shadow_l3e_get_mfn(*sl3e);
-					SHADOW_FOREACH_L2E(sl2mfn, sl2e, 0, 0, current->domain, {
-						if (shadow_l2e_get_flags(*sl2e) & _PAGE_PRESENT) {
-							sl1mfn = shadow_l2e_get_mfn(*sl2e);
-							SHADOW_FOREACH_L1E(sl1mfn, sl1e, 0, 0, {
-								if (sh_l1e_is_aet_magic(*sl1e)) {
-									total1++;
-								}
-								if (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT) {
-									if (sh_l1e_is_aet_magic(*sl1e)) {
-										total2++;
-				//						printk("sl1e:%p %lx\n", sl1e, sl1e->l1);
-										sl1e->l1 &= (~SH_L1E_AET_MAGIC);
-										reversed_aet_magic_count++;
-									}
-								}
-							});
-						}
-					});
-				}
-			});
-		}
-	});	
-	//printk("[joe] total1:%d total2:%d\n", total1, total2);
-}
-
-static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e) {
-	shadow_l1e_t *sl1p;
-	printk("[joe] set_aet_magic mfn:%lx\n", sl1mfn);
-	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
-		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT) && (sl1p->l1 & SH_L1E_AET_MAGIC) == 0 && sl1p->l1 != ptr_sl1e->l1) {
-			sl1p->l1 |= SH_L1E_AET_MAGIC;
-			set_aet_magic_count++;
-//			printk("[joe] %p set aet magic:%lx reversed/set:%llu/%llu\n",
-//					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
-		}
-	});
-}
-
-static inline void reverse_l1_aet_magic(mfn_t sl1mfn) {
-	shadow_l1e_t *sl1p;
-	printk("[joe] reverse_aet_magic mfn:%lx\n", sl1mfn);
-	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, 0, {
-//		printk("[joe] %p aet magic:%lx\n",
-//					sl1p, sl1p->l1);
-		if (sh_l1e_is_aet_magic(*sl1p)) {
-			sl1p->l1 &= (~SH_L1E_AET_MAGIC);
-			reversed_aet_magic_count++;
-//			printk("[joe] %p reverse all aet magic:%lx reversed/set:%llu/%llu\n",
-//					sl1p, sl1p->l1, reversed_aet_magic_count, set_aet_magic_count);
-		}
-	});
-}
+*/
 
 #endif
 #endif
@@ -2916,7 +3039,6 @@ static int sh_page_fault(struct vcpu *v,
 #endif
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-	int is_aet_pf = 0;
 	unsigned long long mem_counter;
 #endif
 #endif
@@ -2939,6 +3061,11 @@ static int sh_page_fault(struct vcpu *v,
 	}
 #endif
 */
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+	is_aet_pf = 0;
+#endif
+#endif
     perfc_incr(shadow_fault);
 
     if ( regs->error_code & PFEC_write_access )
@@ -3041,6 +3168,7 @@ static int sh_page_fault(struct vcpu *v,
                        << PAGE_SHIFT) 
                     | (va & ~PAGE_MASK);
             }
+		//	printk("[joe] here3\n");
             perfc_incr(shadow_fault_fast_mmio);
             SHADOW_PRINTK("fast path mmio %#"PRIpaddr"\n", gpa);
             reset_early_unshadow(v);
@@ -3052,9 +3180,44 @@ static int sh_page_fault(struct vcpu *v,
         {
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-			if (sh_l1e_is_aet_magic(sl1e)) {
-				is_aet_pf = 1;
-				goto page_fault_slow_path;
+			{
+				shadow_l4e_t aet_sl4e;
+				shadow_l3e_t aet_sl3e;
+				shadow_l2e_t aet_sl2e;
+				if ( (__copy_from_user(&aet_sl4e,
+                                   (sh_linear_l4_table(v)
+                                    + shadow_l4_linear_offset(va)),
+                                   sizeof(aet_sl4e)) != 0)
+                 	&& sh_l4e_is_aet_magic(aet_sl4e)) {
+					printk("[joe] sl4 aet magic aet_sl4e:%lx\n", aet_sl4e.l4);
+					is_aet_pf = 1;
+				}
+				else if ( (__copy_from_user(&aet_sl3e,
+                                   (sh_linear_l3_table(v)
+                                    + shadow_l3_linear_offset(va)),
+                                   sizeof(aet_sl3e)) != 0)
+					&& sh_l3e_is_aet_magic(aet_sl3e)) {
+					is_aet_pf = 1;
+				}
+				else if ( (__copy_from_user(&aet_sl2e,
+                                   (sh_linear_l2_table(v)
+                                    + shadow_l2_linear_offset(va)),
+                                   sizeof(aet_sl2e)) != 0) 
+					&& sh_l2e_is_aet_magic(aet_sl2e)) {
+					is_aet_pf = 1;
+				}
+				else if (sh_l1e_is_aet_magic(sl1e)) {
+					is_aet_pf = 1;
+				}
+
+				if (sh_l4e_is_aet_magic(aet_sl4e)) {
+					is_aet_pf = 1;
+				}
+				//printk("[joe] sl4e:%lx sl3e:%lx sl2e:%lx sl1e:%lx va:%lx error:%x is_aet_pf:%d\n", aet_sl4e.l4, aet_sl3e.l3, aet_sl2e.l2, sl1e.l1, va, regs->error_code, is_aet_pf);
+//				printk("[joe] sl4e:%lx va:%lx, is_aet_pf:%d\n", aet_sl4e.l4, va, is_aet_pf);
+				if (is_aet_pf == 1) {
+					goto page_fault_slow_path;
+				}
 			}
 #endif
 #endif
@@ -3483,6 +3646,11 @@ static int sh_page_fault(struct vcpu *v,
     SHADOW_PRINTK("emulate: eip=%#lx esp=%#lx\n", 
                   (unsigned long)regs->eip, (unsigned long)regs->esp);
 
+#if GUEST_PAGING_LEVELS == 4
+#if AET_PF
+	//printk("[joe] sh_page_fault before init emulation error_code:%x va:%lx\n", regs->error_code, va);
+#endif
+#endif
     emul_ops = shadow_init_emulation(&emul_ctxt, regs);
 
     r = x86_emulate(&emul_ctxt.ctxt, emul_ops);
