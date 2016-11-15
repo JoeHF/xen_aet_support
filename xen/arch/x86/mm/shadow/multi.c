@@ -3075,13 +3075,40 @@ static int sh_page_fault(struct vcpu *v,
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
 	is_aet_pf = 0;
+//	if (is_l4_track()) {
+//		printk("sh_page_fault %lx error_code:%x\n", va, regs->error_code);
+//	}
+
+	if (is_l4_track()) {
+			mfn_t sl4mfn;
+			shadow_l4e_t *sl4e_start, *sl4e, *sl4e_temp;
+			sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+//			printk("reserved bit error va:%lx sl4mfn:%lx\n", va, sl4mfn);
+			sl4e_start = sh_map_domain_page(sl4mfn);
+			sl4e_temp = sl4e_start + l4_table_offset(va);
+			if (sl4e_temp->l4 & SH_L1E_AET_MAGIC) {
+				sl4e_temp->l4 &= (~SH_L1E_AET_MAGIC);
+				printk("[joe] big big surprise!!! reverse sl4e_temp:%p %lx\n", sl4e_temp, sl4e_temp->l4);
+			}
+
+			SHADOW_FOREACH_L4E(sl4mfn, sl4e, 0, 0, v->domain, {
+				if ((sl4e->l4 & SH_L1E_AET_MAGIC) > 0) {
+					sl4e->l4 &= (~SH_L1E_AET_MAGIC);
+					printk("[joe] big big surprise!!! reverse sl4e:%p %lx\n", sl4e, sl4e->l4);
+				}
+			});
+			sh_unmap_domain_page(sl4e_start);
+		}
+
 #endif
 #endif
     perfc_incr(shadow_fault);
 
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
+	/*
 			{
+				
 				shadow_l4e_t aet_sl4e;
 				shadow_l3e_t aet_sl3e;
 				shadow_l2e_t aet_sl2e;
@@ -3140,7 +3167,7 @@ static int sh_page_fault(struct vcpu *v,
 //					goto page_fault_slow_path;
 				}
 			}
-
+*/
 #endif
 #endif
 
@@ -3191,6 +3218,10 @@ static int sh_page_fault(struct vcpu *v,
 #if (SHADOW_OPTIMIZATIONS & SHOPT_FAST_FAULT_PATH)
     if ( (regs->error_code & PFEC_reserved_bit) )
     {
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+		#endif
+#endif
 #if (SHADOW_OPTIMIZATIONS & SHOPT_OUT_OF_SYNC) 
         /* First, need to check that this isn't an out-of-sync
          * shadow l1e.  If it is, we fall back to the slow path, which
@@ -3254,9 +3285,10 @@ static int sh_page_fault(struct vcpu *v,
         }
         else
         {
-//			printk("[joe] fault reserved bit set\n");
+			printk("[joe] fault reserved bit set\n");
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
+			/*
 			{
 				shadow_l4e_t aet_sl4e;
 				shadow_l3e_t aet_sl3e;
@@ -3296,6 +3328,7 @@ static int sh_page_fault(struct vcpu *v,
 					goto page_fault_slow_path;
 				}
 			}
+			*/
 #endif
 #endif
             /* This should be exceptionally rare: another vcpu has fixed
@@ -3444,35 +3477,37 @@ static int sh_page_fault(struct vcpu *v,
 
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-	if (is_aet_pf == 1) {
-		mem_counter = pmu_mem_return(0, 0);
-		printk("[joe] find aet magic count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
-		reverse_l1_aet_magic(sl1mfn);
-		printk("[joe] after reverse reversed/set:%llu/%llu\n",
-				reversed_aet_magic_count, set_aet_magic_count);
-		/*
-		{
-			shadow_l1e_t *sp;
-			void *map;
-			map = sh_map_domain_page(sl1mfn);
-			sp = map + ((unsigned long)ptr_sl1e & (PAGE_SIZE - 1));
-			if (sh_l1e_is_aet_magic(*sp)) {
-				sp->l1 &= (~SH_L1E_AET_MAGIC);
-				reversed_aet_magic_count++;
-				printk("[joe] %p revert aet:%lx count:%llu reversed/set:%llu/%llu\n", sp, sp->l1, count, reversed_aet_magic_count, set_aet_magic_count);	
-			}
-		}
-		*/
-	}
-	else {
-		count++;
-		if (count % 10000 == 100/* && reversed_aet_magic_count == set_aet_magic_count*/) {
-			printk("count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
-			printk("[joe] set aet magic\n");
-			//set_aet_magic(sl1mfn, ptr_sl1e);
-			printk("[joe] after set aet magic reversed/set:%llu/%llu\n",
+	if (is_l1_track()) {
+		if (is_aet_pf == 1) {
+			mem_counter = pmu_mem_return(0, 0);
+			printk("[joe] find aet magic count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
+			reverse_l1_aet_magic(sl1mfn);
+			printk("[joe] after reverse reversed/set:%llu/%llu\n",
 					reversed_aet_magic_count, set_aet_magic_count);
+			/*
+			{
+				shadow_l1e_t *sp;
+				void *map;
+				map = sh_map_domain_page(sl1mfn);
+				sp = map + ((unsigned long)ptr_sl1e & (PAGE_SIZE - 1));
+				if (sh_l1e_is_aet_magic(*sp)) {
+					sp->l1 &= (~SH_L1E_AET_MAGIC);
+					reversed_aet_magic_count++;
+					printk("[joe] %p revert aet:%lx count:%llu reversed/set:%llu/%llu\n", sp, sp->l1, count, reversed_aet_magic_count, set_aet_magic_count);	
+				}
+			}
+			*/
+		}
+		else {
+			count++;
+			if (count % 10000 == 100/* && reversed_aet_magic_count == set_aet_magic_count*/) {
+				printk("count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
+				printk("[joe] set aet magic\n");
+				//set_aet_magic(sl1mfn, ptr_sl1e);
+				printk("[joe] after set aet magic reversed/set:%llu/%llu\n",
+						reversed_aet_magic_count, set_aet_magic_count);
 
+			}
 		}
 	}
 #endif

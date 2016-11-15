@@ -2722,7 +2722,6 @@ mfn_is_a_page_table(mfn_t gmfn)
 }
 
 unsigned long long aet_count = 0;
-/*
 static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 	shadow_l4e_t *sl4e;
 	int done = 0;
@@ -2733,9 +2732,9 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 			&& !sh_l4e_is_aet_magic(*sl4e)
 			&& (sl4e->l4 & SH_L1E_AET_MAGIC) == 0) {
 //			type_info = mfn_is_a_page_table(sl4mfn);
-//			printk("before set aet magic sl4e:%p %lx type_info:%lx\n", sl4e, sl4e->l4, type_info);
+			printk("before set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
 			sl4e->l4 |= (SH_L1E_AET_MAGIC);
-//			printk("set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
+			printk("set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
 			done++;
 		//	done = 1;
 		}
@@ -2744,7 +2743,6 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 	printk("[joe] shadow_l4e_set_aet_magic:%d\n", done);
 	return done;
 }
-*/
 
 /*
 static void hash_foreach(struct vcpu *v,
@@ -2785,48 +2783,50 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
     struct vcpu *v = current;
 #ifdef AET_PF
 	// add by houfang
-	mfn_t sl4mfn;
-	mfn_t gmfn;
-	int done = 0;
-	mfn_t joe_sl4mfn;
-	int start;
+	if (is_l4_track()) {
+		mfn_t sl4mfn;
+		mfn_t gmfn;
+		int done = 0;
+		mfn_t joe_sl4mfn;
+		int start;
 
-	if (v->domain->domain_id == 1
-		&& paging_mode_enabled(v->domain)
-		&& paging_mode_shadow(v->domain)) {
-		aet_count++;
-//		if (aet_count > 3800000 && aet_count % 100 == 0) {
-			start = get_aet_start(&joe_sl4mfn);
-		//	printk("[joe] in vmx_vmexit_handler domain:%d aet_start:%d last_start:%lx\n", v->domain->domain_id, start, joe_sl4mfn);
-			if ( !(v->arch.flags & TF_kernel_mode) && !is_pv_32on64_vcpu(v) ) {
-    		    gmfn = pagetable_get_mfn(v->arch.guest_table_user);
-		    }
-   			else
-        		gmfn = pagetable_get_mfn(v->arch.guest_table);
-
-			sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
-			//mfn_is_a_page_table(sl4mfn);
-			//if (mfn_is_a_page_table(sl4mfn)) {
-			//	done = shadow_l4e_set_aet_magic(v, sl4mfn);
-				if (joe_sl4mfn == sl4mfn && aet_count % 500000 == 0) {
-					printk("[joe] suprise!!! in vmexit_handler after set l4e aet gmfn:%lx sl4mfn:%lx aet_count:%llu done:%d\n", gmfn, sl4mfn, aet_count, done);
+		if (v->domain->domain_id == 1
+			&& paging_mode_enabled(v->domain)
+			&& paging_mode_shadow(v->domain)) {
+				aet_count++;
+	//		if (aet_count > 3800000 && aet_count % 100 == 0) {
+				start = get_aet_start(&joe_sl4mfn);
+			//	printk("[joe] in vmx_vmexit_handler domain:%d aet_start:%d last_start:%lx\n", v->domain->domain_id, start, joe_sl4mfn);
+				if ( !(v->arch.flags & TF_kernel_mode) && !is_pv_32on64_vcpu(v) ) {
+					gmfn = pagetable_get_mfn(v->arch.guest_table_user);
 				}
-			//}
-//		}
-	}
-	/*
-	mfn_t sl4mfn;
-	shadow_l4e_t *sl4p;
-	if (v->domain->domain_id == 1) {
-		count++;
-		if (count == 10000) {
-			sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
-			SHADOW_FOREACH_L4E(sl4mfn, sl4p, 0, 0, v->domain, {
-				printk("[joe] vmx_vmexit_handler sl4p:%p %lx\n", sl4p, sl4p->l4);
-			});
+				else
+					gmfn = pagetable_get_mfn(v->arch.guest_table);
+
+				sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+				//mfn_is_a_page_table(sl4mfn);
+				//if (mfn_is_a_page_table(sl4mfn)) {
+					if (joe_sl4mfn == sl4mfn && aet_count % 500 == 0) {
+						done = shadow_l4e_set_aet_magic(v, sl4mfn);
+						printk("[joe] suprise!!! in vmexit_handler after set l4e aet gmfn:%lx sl4mfn:%lx aet_count:%llu done:%d\n", gmfn, sl4mfn, aet_count, done);
+					}
+				//}
+	//		}
 		}
-	}
-	*/
+		/*
+		mfn_t sl4mfn;
+		shadow_l4e_t *sl4p;
+		if (v->domain->domain_id == 1) {
+			count++;
+			if (count == 10000) {
+				sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+				SHADOW_FOREACH_L4E(sl4mfn, sl4p, 0, 0, v->domain, {
+					printk("[joe] vmx_vmexit_handler sl4p:%p %lx\n", sl4p, sl4p->l4);
+				});
+			}
+		}
+		*/
+		}
 #endif
     __vmread(GUEST_RIP,    &regs->rip);
     __vmread(GUEST_RSP,    &regs->rsp);

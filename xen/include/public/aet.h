@@ -9,12 +9,17 @@
 
 enum AET_CMD_OP
 {
-	NO_OP=0, OPEN, SET_TRACK
+	NO_OP=0, SET_OPEN, SET_TRACK
 };
 
 enum TRACK 
 {
-	NONE=0, L1_TRACK, L4_TRACK
+	L1_TRACK=0, L4_TRACK
+};
+
+enum AET_TRACK_OPEN
+{
+	CLOSED=0, OPEN
 };
 
 enum CMD_OP
@@ -28,6 +33,7 @@ struct page_reuse_time {
 };
 
 struct AET_ctrl {
+	int open_;
 	int start_;
 	unsigned long sl4mfn_;
 	enum TRACK track_;
@@ -36,6 +42,9 @@ struct AET_ctrl {
 
 void aet_init(void);
 void set_aet_cmd(enum AET_CMD_OP aet_cmd, unsigned long arg1, unsigned long arg2);
+int is_l4_track(void);
+int is_l1_track(void);
+int is_aet_track_open(void);
 
 /* The following function is used to debug */
 int get_track(void);

@@ -22,12 +22,33 @@ int get_aet_start(unsigned long *sl4mfn) {
 	return aet_ctrl->start_;
 }
 
+static void set_aet_track_open(enum AET_TRACK_OPEN open) {
+	aet_ctrl->open_ = open;
+}
+
 static void set_track(enum TRACK track) {
+	if (!is_aet_track_open()) {
+		printk("aet set track fail! aet track not open\n");
+		return;
+	}
+
 	aet_ctrl->track_ = track;
 }
 
 int get_track(void) {
 	return aet_ctrl->track_;
+}
+
+int is_l4_track(void) {
+	return is_aet_track_open() && (aet_ctrl->track_ == L4_TRACK);
+}
+
+int is_l1_track(void) {
+	return is_aet_track_open() && (aet_ctrl->track_ == L1_TRACK);
+}
+
+int is_aet_track_open(void) {
+	return aet_ctrl->open_ == OPEN;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
@@ -86,7 +107,8 @@ void set_aet_cmd(enum AET_CMD_OP aet_cmd, unsigned long arg1, unsigned long arg2
 		case NO_OP:
 			printk("no op\n");
 			break;
-		case OPEN:
+		case SET_OPEN:
+			set_aet_track_open(arg1);
 			break;
 		case SET_TRACK:
 			set_track(arg1);
