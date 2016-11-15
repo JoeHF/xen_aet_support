@@ -820,11 +820,6 @@ static inline int sh_check_page_has_no_refs(struct page_info *page)
              ((count & PGC_allocated) ? 1 : 0) ); 
 }
 
-/* xc_reserved_op.c api */
-u64 pmu_l3_return(int cpu, int arg2);
-u64 pmu_mem_return(int cpu, int arg2);
-u64 stop_pmu_return(int cpu, int arg2);
-
 #endif /* _XEN_SHADOW_PRIVATE_H */
 
 /*

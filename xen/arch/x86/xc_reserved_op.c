@@ -1,38 +1,7 @@
+#include <public/xc_reserved_op.h>
 #include <xen/lib.h>
 #include <xen/smp.h>
-///MSR_REGISTERS
-#define IA32_PMC0 0xC1
-#define IA32_PERFEVTSEL0 0x186
-#define IA32_PERF_GLOBAL_STATUS 0x38E
-#define IA32_PERF_GLOBAL_CTRL 0x38F
-#define IA32_PERF_GLOBAL_OVF_CTRL 0x390
-#define IA32_PEBS 0x3F1
-#define IA32_FIXED_CTR_CTRL 0x38D
-#define IA32_FIXED_CTR 0x309
-#define IA32_PEBS_ENABLE 0x3f1
-#define MSR_PEBS_LD_LAT 0x3f6
-#define IA32_DS_AREA 0x600
-#define IA32_DEBUG_CTRL 0x1D9
-
-
-
-//MSR_PERFEVTSEL_SHIFT
-#define CMASK 24
-#define Invert_counter_mask 23
-#define Enable_counters 22
-#define Any_Thread 21
-#define APIC_interrupt_enable 20
-#define Pin_control 19
-#define Edge_detect 18
-#define OS 17
-#define USR 16
-
-#define PMC_N 4
-#define PMC_N_MASK ((1 << PMC_N) - 1)
-#define FIXED_N 3
-#define FIXED_N_MASK ((((1UL) << FIXED_N) - 1) << 32)
-#define FIXED_CONTROL (7)
-
+#include <public/aet.h>
 struct event {
 	char *name;
 	u32 event, umask, tmask;
@@ -350,6 +319,7 @@ static int readCPUID(unsigned int arg) {
 	return 0;
 }
 
+/*
 unsigned long do_xc_reserved_op(unsigned long cpu, unsigned long arg1, unsigned long arg2) {
 	printk("do_xc_reserved_op, cpu = %lu, arg1 = %lu, arg2 = %lu\nFrom cpu: %X\n", cpu, arg1, arg2, smp_processor_id());
 	switch (arg1) {
@@ -359,4 +329,23 @@ unsigned long do_xc_reserved_op(unsigned long cpu, unsigned long arg1, unsigned 
 	}
 	return 0;
 }
+*/
 
+unsigned long do_xc_reserved_op(enum CMD_OP cmd, unsigned long arg0, unsigned long arg1, unsigned long arg2) {
+	printk("do_xc_reserved_op, CMD = %d, cpu = %lu, arg1 = %lu, arg2 = %lu\nFrom cpu: %X\n", cmd, arg0, arg1, arg2, smp_processor_id());
+	switch (cmd) {
+		case PMU_CMD: //arg0 means cpu arg1 means start or stop arg2 means whether clean up
+			switch (arg1) {
+				case 0 : readCPUID(arg2); break;
+				case 1 : start_pmu(arg0, arg2); break;
+				case 2 : stop_pmu(arg0, arg2); break;
+			}
+			break;
+		case AET_CMD:
+			set_aet_cmd(arg0, arg1, arg2);
+			break;
+		default:
+			printk("do_xc_reserved_op, invalid AET_CMD:%d\n", cmd);
+	}
+	return 0;
+}

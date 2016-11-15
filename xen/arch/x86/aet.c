@@ -11,6 +11,25 @@
 #include <xen/kernel.h>
 
 static struct AET_ctrl *aet_ctrl;
+
+void set_aet_start(unsigned long sl4mfn) {
+	aet_ctrl->start_ = 1;
+	aet_ctrl->sl4mfn_ = sl4mfn;
+}
+
+int get_aet_start(unsigned long *sl4mfn) {
+	*sl4mfn = aet_ctrl->sl4mfn_;
+	return aet_ctrl->start_;
+}
+
+static void set_track(enum TRACK track) {
+	aet_ctrl->track_ = track;
+}
+
+int get_track(void) {
+	return aet_ctrl->track_;
+}
+
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
 {
     unsigned long page_step, i, mfn, page_nr;
@@ -58,4 +77,21 @@ void aet_init() {
 
     memset(aet_ctrl, 0, sizeof(aet_ctrl));
 	printk("[joe] aet_init end\n");
+}
+
+
+void set_aet_cmd(enum AET_CMD_OP aet_cmd, unsigned long arg1, unsigned long arg2) {
+	printk("set aet cmd, AET_CMD = %d arg1 = %lu arg2 = %lu\n", aet_cmd, arg1, arg2);
+	switch(aet_cmd) {
+		case NO_OP:
+			printk("no op\n");
+			break;
+		case OPEN:
+			break;
+		case SET_TRACK:
+			set_track(arg1);
+			break;
+		default:
+			printk("invalid aet cmd\n");
+	}
 }

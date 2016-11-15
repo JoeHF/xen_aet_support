@@ -38,7 +38,9 @@
 #include <asm/shadow.h>
 #include <xen/numa.h>
 #include "private.h"
+#ifdef AET_PF
 #include <public/aet.h>
+#endif
 
 DEFINE_PER_CPU(uint32_t,trace_shadow_path_flags);
 

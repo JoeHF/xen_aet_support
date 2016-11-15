@@ -112,6 +112,8 @@ arch_compat_vcpu_op(
 
 extern unsigned long
 do_xc_reserved_op(
+	int aet_cmd,
+	unsigned long cpu,	
 	unsigned long arg1,
 	unsigned long arg2);
 

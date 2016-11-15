@@ -10,11 +10,11 @@ xl vcpu-set 1 1
 xl vcpu-pin 1 0 $domu_cpu
 PMU_DIR=./
 #stop and clear
-`$PMU_DIR/a.out $domu_cpu 2 1`
+`$PMU_DIR/a.out 1 $domu_cpu 2 1`
 #start pmu
-`$PMU_DIR/a.out $domu_cpu 1 0`
+`$PMU_DIR/a.out 1 $domu_cpu 1 0`
 ssh 172.17.11.53 "/root/houfang/test_pmu/wssfake/wss_fake $array $round"
 #sleep 27
 #stop
-`$PMU_DIR/a.out $domu_cpu 2 1`
+`$PMU_DIR/a.out 1 $domu_cpu 2 1`
 xl dm -c

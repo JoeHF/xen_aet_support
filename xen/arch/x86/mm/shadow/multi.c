@@ -41,6 +41,10 @@
 #include <public/sched.h>
 #include "private.h"
 #include "types.h"
+#ifdef AET_PF
+#include <public/aet.h>
+#include <public/xc_reserved_op.h>
+#endif
 
 /* THINGS TO DO LATER:
  * 
@@ -1794,6 +1798,7 @@ static shadow_l4e_t * shadow_get_and_create_l4e(struct vcpu *v,
 {
     /* There is always a shadow of the top level table.  Get it. */
     *sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+	set_aet_start(*sl4mfn);
     /* Reading the top level table is always valid. */
     return sh_linear_l4_table(v) + shadow_l4_linear_offset(gw->va);
 }
@@ -1821,6 +1826,12 @@ static shadow_l3e_t * shadow_get_and_create_l3e(struct vcpu *v,
     ASSERT(sl4e != NULL);
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
+	if (sh_l4e_is_aet_magic(*sl4e)) {
+		printk("[joe] l4e! before reverse aet magic:sl4e:%p %lx\n", sl4e, sl4e->l4);
+		reverse_l4_aet_magic(gw, sl4mfn);
+		printk("[joe] l4e! after reverse aet magic:sl4e:%p %lx\n", sl4e, sl4e->l4);
+	}
+
 /*
 	//printk("[joe] shadow_get_and_create_l3e sl4e:%p %lx va:%lx\n", sl4e, sl4e->l4, gw->va);
 	if (sh_l4e_is_aet_magic(*sl4e)) {
@@ -3068,6 +3079,71 @@ static int sh_page_fault(struct vcpu *v,
 #endif
     perfc_incr(shadow_fault);
 
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
+			{
+				shadow_l4e_t aet_sl4e;
+				shadow_l3e_t aet_sl3e;
+				shadow_l2e_t aet_sl2e;
+				shadow_l1e_t aet_sl1e;
+				if ( (__copy_from_user(&aet_sl4e,
+                                   (sh_linear_l4_table(v)
+                                    + shadow_l4_linear_offset(va)),
+                                   sizeof(aet_sl4e)) != 0)
+                 	&& sh_l4e_is_aet_magic(aet_sl4e)) {
+					printk("[joe] sl4 aet magic aet_sl4e:%lx\n", aet_sl4e.l4);
+					is_aet_pf = 4;
+				}
+				
+				if ( (__copy_from_user(&aet_sl3e,
+                                   (sh_linear_l3_table(v)
+                                    + shadow_l3_linear_offset(va)),
+                                   sizeof(aet_sl3e)) != 0)
+					&& sh_l3e_is_aet_magic(aet_sl3e)) {
+					is_aet_pf = 3;
+				}
+				
+				if ( (__copy_from_user(&aet_sl2e,
+                                   (sh_linear_l2_table(v)
+                                    + shadow_l2_linear_offset(va)),
+                                   sizeof(aet_sl2e)) != 0) 
+					&& sh_l2e_is_aet_magic(aet_sl2e)) {
+					is_aet_pf = 2;
+				}
+
+				if ( (__copy_from_user(&aet_sl1e,
+                                   (sh_linear_l1_table(v)
+                                    + shadow_l1_linear_offset(va)),
+                                   sizeof(aet_sl1e)) != 0) 
+					&& sh_l1e_is_aet_magic(aet_sl1e)) {
+					is_aet_pf = 1;
+				}
+
+				if (sh_l1e_is_aet_magic(aet_sl1e)) {
+					is_aet_pf = 1;
+				}
+
+				if (sh_l2e_is_aet_magic(aet_sl2e)) {
+					is_aet_pf = 2;
+				}
+
+				if (sh_l3e_is_aet_magic(aet_sl3e)) {
+					is_aet_pf = 3;
+				}
+
+				if (sh_l4e_is_aet_magic(aet_sl4e)) {
+					is_aet_pf = 4;
+				}
+	//			printk("[joe] sl4e:%lx va:%lx, is_aet_pf:%d\n", aet_sl4e.l4, va, is_aet_pf);
+				if (is_aet_pf != 0) {
+					printk("[joe] sl4e:%lx sl3e:%lx sl2e:%lx sl1e:%lx va:%lx error:%x is_aet_pf:%d\n", aet_sl4e.l4, aet_sl3e.l3, aet_sl2e.l2, sl1e.l1, va, regs->error_code, is_aet_pf);
+//					goto page_fault_slow_path;
+				}
+			}
+
+#endif
+#endif
+
     if ( regs->error_code & PFEC_write_access )
         access.write_access = 1;
 
@@ -3178,6 +3254,7 @@ static int sh_page_fault(struct vcpu *v,
         }
         else
         {
+//			printk("[joe] fault reserved bit set\n");
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
 			{
@@ -3392,7 +3469,7 @@ static int sh_page_fault(struct vcpu *v,
 		if (count % 10000 == 100/* && reversed_aet_magic_count == set_aet_magic_count*/) {
 			printk("count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
 			printk("[joe] set aet magic\n");
-			set_aet_magic(sl1mfn, ptr_sl1e);
+			//set_aet_magic(sl1mfn, ptr_sl1e);
 			printk("[joe] after set aet magic reversed/set:%llu/%llu\n",
 					reversed_aet_magic_count, set_aet_magic_count);
 
@@ -4282,13 +4359,14 @@ sh_update_cr3(struct vcpu *v, int do_locking)
                    (unsigned long)pagetable_get_pfn(v->arch.guest_table));
 
 #if GUEST_PAGING_LEVELS == 4
-    if ( !(v->arch.flags & TF_kernel_mode) && !is_pv_32on64_vcpu(v) )
+    if ( !(v->arch.flags & TF_kernel_mode) && !is_pv_32on64_vcpu(v) ) {
         gmfn = pagetable_get_mfn(v->arch.guest_table_user);
+	}
     else
 #endif
         gmfn = pagetable_get_mfn(v->arch.guest_table);
 
-
+//	printk("[joe] sh_update_cr3 gmfn:%lx\n", gmfn);
     ////
     //// vcpu->arch.paging.shadow.guest_vtable
     ////
@@ -4610,6 +4688,7 @@ int sh_rm_write_access_from_l1(struct vcpu *v, mfn_t sl1mfn,
     mfn_t base_sl1mfn = sl1mfn; /* Because sl1mfn changes in the foreach */
 #endif
     
+	printk("[joe] sh_rm_write_access_from_l1 sl1mfn:%lx readonly_mfn:%lx\n", sl1mfn, readonly_mfn);
     SHADOW_FOREACH_L1E(sl1mfn, sl1e, 0, done, 
     {
 #if GUEST_PAGING_LEVELS == 4

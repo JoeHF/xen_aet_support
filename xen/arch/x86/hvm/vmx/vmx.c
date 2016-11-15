@@ -58,6 +58,10 @@
 #include <asm/hvm/nestedhvm.h>
 #include <asm/event.h>
 #include <public/arch-x86/cpuid.h>
+#ifdef AET_PF
+#include "../../mm/mm-locks.h"
+#include <public/aet.h>
+#endif
 
 static bool_t __initdata opt_force_ept;
 boolean_param("force-ept", opt_force_ept);
@@ -2639,16 +2643,177 @@ void vmx_handle_EOI_induced_exit(struct vlapic *vlapic, int vector)
     vlapic_handle_EOI_induced_exit(vlapic, vector);
 }
 
-//unsigned long long count = 0;
+#ifdef AET_PF
+#define SH_L1E_AET_MAGIC 0xffffff0000000400ULL
+//typedef l1_pgentry_t shadow_l1e_t;
+typedef l4_pgentry_t shadow_l4e_t;
+static inline int sh_l4e_is_aet_magic(shadow_l4e_t sl4e) {
+	return ((sl4e.l4 & SH_L1E_AET_MAGIC) == SH_L1E_AET_MAGIC);
+}
 
+//#define SHADOW_L1_PAGETABLE_ENTRIES     512
+#define SHADOW_L4_PAGETABLE_ENTRIES     512
+/*
+#define SH_type_l1_64_shadow   (8U) // shadowing a 64-bit L1 page 
+#define SH_type_fl1_64_shadow  (9U) // L1 shadow for 64-bit 2M superpg 
+#define SH_type_l1_shadow  SH_type_l1_64_shadow
+#define SH_type_fl1_shadow SH_type_fl1_64_shadow
+*/
+#define SH_type_l4_64_shadow  (13U) /* shadowing a 64-bit L4 page */
+static inline void *
+sh_map_domain_page(mfn_t mfn)
+{
+    return map_domain_page(mfn_x(mfn));
+}
+static inline void 
+sh_unmap_domain_page(void *p) 
+{
+    unmap_domain_page(p);
+}
+/*
+static inline u32 shadow_l1e_get_flags(shadow_l1e_t sl1e)
+{ return l1e_get_flags(sl1e); }
+static inline mfn_t shadow_l1e_get_mfn(shadow_l1e_t sl1e)
+{ return _mfn(l1e_get_pfn(sl1e)); }
+*/
+static inline u32 shadow_l4e_get_flags(shadow_l4e_t sl4e)
+{ return l4e_get_flags(sl4e); }
+
+#define SHADOW_FOREACH_L4E(_sl4mfn, _sl4e, _gl4p, _done, _dom, _code)   \
+do {                                                                    \
+    shadow_l4e_t *_sp = sh_map_domain_page((_sl4mfn));                  \
+    int _i;                                                             \
+    ASSERT(mfn_to_page(_sl4mfn)->u.sh.type == SH_type_l4_64_shadow);\
+    for ( _i = 0; _i < SHADOW_L4_PAGETABLE_ENTRIES; _i++ )              \
+    {                                                                   \
+        {                                                               \
+            (_sl4e) = _sp + _i;                                         \
+            if ( shadow_l4e_get_flags(*(_sl4e)) & _PAGE_PRESENT )       \
+                {_code}                                                 \
+            if ( _done ) break;                                         \
+        }                                                               \
+    }                                                                   \
+    sh_unmap_domain_page(_sp);                                          \
+} while (0)
+
+#define shadow_mode_enabled(_d)    paging_mode_shadow(_d)
+#define shadow_mode_refcounts(_d) (paging_mode_shadow(_d) && \
+                                   paging_mode_refcounts(_d))
+
+static inline int
+mfn_is_a_page_table(mfn_t gmfn)
+{
+    struct page_info *page = mfn_to_page(gmfn);
+//    struct domain *owner;
+    unsigned long type_info;
+
+    if ( !mfn_valid(gmfn) )
+        return 0;
+
+/*
+    owner = page_get_owner(page);
+    if ( owner && shadow_mode_refcounts(owner) 
+         && (page->count_info & PGC_page_table) )
+        return 1; 
+*/
+	printk("gmfn:%lx type_info:%lx\n", gmfn, page->u.inuse.type_info);
+    type_info = page->u.inuse.type_info & PGT_type_mask;
+    return type_info == PGT_l4_page_table;
+}
+
+unsigned long long aet_count = 0;
+/*
+static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
+	shadow_l4e_t *sl4e;
+	int done = 0;
+	//unsigned long type_info = 0;
+
+	SHADOW_FOREACH_L4E(sl4mfn, sl4e, 0, 0, v->domain, {
+		if ((shadow_l4e_get_flags(*sl4e) & _PAGE_PRESENT)
+			&& !sh_l4e_is_aet_magic(*sl4e)
+			&& (sl4e->l4 & SH_L1E_AET_MAGIC) == 0) {
+//			type_info = mfn_is_a_page_table(sl4mfn);
+//			printk("before set aet magic sl4e:%p %lx type_info:%lx\n", sl4e, sl4e->l4, type_info);
+			sl4e->l4 |= (SH_L1E_AET_MAGIC);
+//			printk("set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
+			done++;
+		//	done = 1;
+		}
+	});
+
+	printk("[joe] shadow_l4e_set_aet_magic:%d\n", done);
+	return done;
+}
+*/
+
+/*
+static void hash_foreach(struct vcpu *v,
+						 mfn callback_mfn) {
+	int i, done = 0;
+	struct domain *d = v->domain;
+	struct page_info *x;
+	
+	ASSERT(paging_locked_by_me(d));
+
+	if ( unlikely(!d->arch.paging.shadow.hash_table) ) 
+		return;
+
+	ASSERT(d->arch.paging.shadow.hash_walking == 0);
+	d->arch.paging.shadow.hash_walking = 1;
+	
+	for ( i = 0; i < SHADOW_HASH_BUCKETS; i++ ) {
+		for ( x = d->arch.paging.shadow.hash_table[i]; x; x = next_shadow(x) ) {
+			if ((1 << x->u.sh.type) & ((1 << SH_type_l1_64_shadow) | (1 << SH_type_fl1_64_shadow))) {
+				done = shadow_l1e_set_aeg_magic(v, page_to_mfn(x), callback_mfn);
+				if (done == 1) 
+					break;
+			}
+		}
+
+		if (done == 1)
+			break;
+	}
+	
+}
+*/
+#endif
 //typedef l4_pgentry_t shadow_l4e_t;
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
     unsigned long exit_qualification, exit_reason, idtv_info, intr_info = 0;
     unsigned int vector = 0;
     struct vcpu *v = current;
-
+#ifdef AET_PF
 	// add by houfang
+	mfn_t sl4mfn;
+	mfn_t gmfn;
+	int done = 0;
+	mfn_t joe_sl4mfn;
+	int start;
+
+	if (v->domain->domain_id == 1
+		&& paging_mode_enabled(v->domain)
+		&& paging_mode_shadow(v->domain)) {
+		aet_count++;
+//		if (aet_count > 3800000 && aet_count % 100 == 0) {
+			start = get_aet_start(&joe_sl4mfn);
+		//	printk("[joe] in vmx_vmexit_handler domain:%d aet_start:%d last_start:%lx\n", v->domain->domain_id, start, joe_sl4mfn);
+			if ( !(v->arch.flags & TF_kernel_mode) && !is_pv_32on64_vcpu(v) ) {
+    		    gmfn = pagetable_get_mfn(v->arch.guest_table_user);
+		    }
+   			else
+        		gmfn = pagetable_get_mfn(v->arch.guest_table);
+
+			sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+			//mfn_is_a_page_table(sl4mfn);
+			//if (mfn_is_a_page_table(sl4mfn)) {
+			//	done = shadow_l4e_set_aet_magic(v, sl4mfn);
+				if (joe_sl4mfn == sl4mfn && aet_count % 500000 == 0) {
+					printk("[joe] suprise!!! in vmexit_handler after set l4e aet gmfn:%lx sl4mfn:%lx aet_count:%llu done:%d\n", gmfn, sl4mfn, aet_count, done);
+				}
+			//}
+//		}
+	}
 	/*
 	mfn_t sl4mfn;
 	shadow_l4e_t *sl4p;
@@ -2662,6 +2827,7 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 		}
 	}
 	*/
+#endif
     __vmread(GUEST_RIP,    &regs->rip);
     __vmread(GUEST_RSP,    &regs->rsp);
     __vmread(GUEST_RFLAGS, &regs->rflags);
