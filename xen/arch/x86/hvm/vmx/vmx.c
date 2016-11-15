@@ -2732,9 +2732,9 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 			&& !sh_l4e_is_aet_magic(*sl4e)
 			&& (sl4e->l4 & SH_L1E_AET_MAGIC) == 0) {
 //			type_info = mfn_is_a_page_table(sl4mfn);
-			printk("before set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
+		//	printk("before set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
 			sl4e->l4 |= (SH_L1E_AET_MAGIC);
-			printk("set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
+		//	printk("set aet magic sl4e:%p %lx\n", sl4e, sl4e->l4);
 			done++;
 		//	done = 1;
 		}
@@ -2743,39 +2743,8 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 	printk("[joe] shadow_l4e_set_aet_magic:%d\n", done);
 	return done;
 }
-
-/*
-static void hash_foreach(struct vcpu *v,
-						 mfn callback_mfn) {
-	int i, done = 0;
-	struct domain *d = v->domain;
-	struct page_info *x;
-	
-	ASSERT(paging_locked_by_me(d));
-
-	if ( unlikely(!d->arch.paging.shadow.hash_table) ) 
-		return;
-
-	ASSERT(d->arch.paging.shadow.hash_walking == 0);
-	d->arch.paging.shadow.hash_walking = 1;
-	
-	for ( i = 0; i < SHADOW_HASH_BUCKETS; i++ ) {
-		for ( x = d->arch.paging.shadow.hash_table[i]; x; x = next_shadow(x) ) {
-			if ((1 << x->u.sh.type) & ((1 << SH_type_l1_64_shadow) | (1 << SH_type_fl1_64_shadow))) {
-				done = shadow_l1e_set_aeg_magic(v, page_to_mfn(x), callback_mfn);
-				if (done == 1) 
-					break;
-			}
-		}
-
-		if (done == 1)
-			break;
-	}
-	
-}
-*/
 #endif
-//typedef l4_pgentry_t shadow_l4e_t;
+
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
     unsigned long exit_qualification, exit_reason, idtv_info, intr_info = 0;

@@ -3082,21 +3082,26 @@ static int sh_page_fault(struct vcpu *v,
 	if (is_l4_track()) {
 			mfn_t sl4mfn;
 			shadow_l4e_t *sl4e_start, *sl4e, *sl4e_temp;
+			int count = 0;
 			sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
 //			printk("reserved bit error va:%lx sl4mfn:%lx\n", va, sl4mfn);
 			sl4e_start = sh_map_domain_page(sl4mfn);
 			sl4e_temp = sl4e_start + l4_table_offset(va);
 			if (sl4e_temp->l4 & SH_L1E_AET_MAGIC) {
 				sl4e_temp->l4 &= (~SH_L1E_AET_MAGIC);
-				printk("[joe] big big surprise!!! reverse sl4e_temp:%p %lx\n", sl4e_temp, sl4e_temp->l4);
+				printk("[joe] big big surprise!!! reverse sl4e_temp:%p %lx va:%lx error_code:%x\n", sl4e_temp, sl4e_temp->l4, va, regs->error_code);
 			}
 
 			SHADOW_FOREACH_L4E(sl4mfn, sl4e, 0, 0, v->domain, {
 				if ((sl4e->l4 & SH_L1E_AET_MAGIC) > 0) {
 					sl4e->l4 &= (~SH_L1E_AET_MAGIC);
-					printk("[joe] big big surprise!!! reverse sl4e:%p %lx\n", sl4e, sl4e->l4);
+					count++;
+		//			printk("[joe] big big surprise!!! reverse sl4e:%p %lx\n", sl4e, sl4e->l4);
 				}
 			});
+
+			if (count != 0)
+				printk("[joe] big big surprise!!! reverse other sl4e count:%d\n", count);
 			sh_unmap_domain_page(sl4e_start);
 		}
 
@@ -3910,6 +3915,24 @@ sh_invlpg(struct vcpu *v, unsigned long va)
 #if SHADOW_PAGING_LEVELS == 4
     {
         shadow_l3e_t sl3e;
+#ifdef AET_PF
+		if (is_aet_track_open()) {
+			if (sh_l4e_is_aet_magic(sh_linear_l4_table(v)[shadow_l4_linear_offset(va)])) {
+				mfn_t sl4mfn;
+				shadow_l4e_t *sl4e_start, *sl4e_temp;
+				printk("[joe] sl4e is aet magic in invlpg!!!!!!!! sl4e:%p\n", sh_linear_l4_table(v) + shadow_l4_linear_offset(va));
+				sl4mfn = pagetable_get_mfn(v->arch.shadow_table[0]);
+				sl4e_start = sh_map_domain_page(sl4mfn);
+				sl4e_temp = sl4e_start + l4_table_offset(va);
+				if (sl4e_temp->l4 & SH_L1E_AET_MAGIC) {
+					sl4e_temp->l4 &= (~SH_L1E_AET_MAGIC);
+					printk("[joe] big big surprise in invlpg!!! reverse sl4e_temp:%p %lx va:%lx\n", sl4e_temp, sl4e_temp->l4, va);
+				}
+
+				sh_unmap_domain_page(sl4e_start);
+			}
+		}
+#endif
         if ( !(shadow_l4e_get_flags(
                    sh_linear_l4_table(v)[shadow_l4_linear_offset(va)])
                & _PAGE_PRESENT) )
@@ -4723,16 +4746,16 @@ int sh_rm_write_access_from_l1(struct vcpu *v, mfn_t sl1mfn,
     mfn_t base_sl1mfn = sl1mfn; /* Because sl1mfn changes in the foreach */
 #endif
     
-	printk("[joe] sh_rm_write_access_from_l1 sl1mfn:%lx readonly_mfn:%lx\n", sl1mfn, readonly_mfn);
     SHADOW_FOREACH_L1E(sl1mfn, sl1e, 0, done, 
     {
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-		if (sh_l1e_is_aet_magic(*sl1e)) {
-			reversed_aet_magic_count++;
-//			printk("[joe] in sh rm write access from l1\n");
-//			printk("sl1e:%p :%lx\n", sl1e, sl1e->l1);
-			sl1e->l1 &= (~SH_L1E_AET_MAGIC);
+		if (is_aet_track_open()) {
+			if (sh_l1e_is_aet_magic(*sl1e)) {
+				printk("[joe] sh_rm_write_access_from_l1 sl1mfn:%lx readonly_mfn:%lx sl1e:%p %lx\n", sl1mfn, readonly_mfn, sl1e, sl1e->l1);
+				reversed_aet_magic_count++;
+				sl1e->l1 &= (~SH_L1E_AET_MAGIC);
+			}
 		}
 #endif
 #endif
