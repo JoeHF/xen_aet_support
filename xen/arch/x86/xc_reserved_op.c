@@ -2,6 +2,9 @@
 #include <xen/lib.h>
 #include <xen/smp.h>
 #include <public/aet.h>
+
+static char* CMD_NAME[3] = {"INVALID", "PMU_CMD", "AET_CMD"};
+
 struct event {
 	char *name;
 	u32 event, umask, tmask;
@@ -332,7 +335,7 @@ unsigned long do_xc_reserved_op(unsigned long cpu, unsigned long arg1, unsigned 
 */
 
 unsigned long do_xc_reserved_op(enum CMD_OP cmd, unsigned long arg0, unsigned long arg1, unsigned long arg2) {
-	printk("do_xc_reserved_op, CMD = %d, cpu = %lu, arg1 = %lu, arg2 = %lu\nFrom cpu: %X\n", cmd, arg0, arg1, arg2, smp_processor_id());
+	printk("do_xc_reserved_op, CMD = %s, cpu = %lu, arg1 = %lu, arg2 = %lu\nFrom cpu: %X\n", CMD_NAME[cmd], arg0, arg1, arg2, smp_processor_id());
 	switch (cmd) {
 		case PMU_CMD: //arg0 means cpu arg1 means start or stop arg2 means whether clean up
 			switch (arg1) {

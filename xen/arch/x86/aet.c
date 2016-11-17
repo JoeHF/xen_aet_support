@@ -11,6 +11,9 @@
 #include <xen/kernel.h>
 
 static struct AET_ctrl *aet_ctrl;
+static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
+static char* TRACK_NAME[3] = {"L1_TRACK", "L4_TRACK", "PAGE_FAULT_COUNT"};
+static char* OPEN_NAME[2] = {"CLOSED", "OPEN"};
 
 void set_aet_start(unsigned long sl4mfn) {
 	aet_ctrl->start_ = 1;
@@ -47,8 +50,32 @@ int is_l1_track(void) {
 	return is_aet_track_open() && (aet_ctrl->track_ == L1_TRACK);
 }
 
+int is_page_fault_count(void) {
+	return is_aet_track_open() && (aet_ctrl->track_ == PAGE_FAULT_COUNT);
+}
+
 int is_aet_track_open(void) {
 	return aet_ctrl->open_ == OPEN;
+}
+
+int l1_set_over(int count) {
+	return count >= CONSECUTIVE_SET_PAGE;
+}
+
+void add_set_aet_magic_count(void) {
+	aet_ctrl->set_aet_magic_count++;
+}
+
+void add_reversed_aet_magic_count(void) {
+	aet_ctrl->reversed_aet_magic_count++;
+}
+
+void add_tracked_aet_magic_count(void) {
+	aet_ctrl->tracked_aet_magic_count++;
+}
+
+void add_page_fault_count(void) {
+	aet_ctrl->page_fault_count++;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
@@ -102,15 +129,17 @@ void aet_init() {
 
 
 void set_aet_cmd(enum AET_CMD_OP aet_cmd, unsigned long arg1, unsigned long arg2) {
-	printk("set aet cmd, AET_CMD = %d arg1 = %lu arg2 = %lu\n", aet_cmd, arg1, arg2);
+	printk("set aet cmd, AET_CMD = %s\n", AET_CMD_NAME[aet_cmd]);
 	switch(aet_cmd) {
 		case NO_OP:
 			printk("no op\n");
 			break;
 		case SET_OPEN:
+			printk("set track open :%s\n", OPEN_NAME[arg1]);
 			set_aet_track_open(arg1);
 			break;
 		case SET_TRACK:
+			printk("set track way :%s\n", TRACK_NAME[arg1]);
 			set_track(arg1);
 			break;
 		default:

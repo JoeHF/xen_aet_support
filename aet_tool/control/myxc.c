@@ -17,6 +17,9 @@
 static struct AET_ctrl *aet_ctrl = (struct AET_ctrl *)PML4_ADDR(270ul);
 
 int main(int argc, char** argv) {
-	printf("start:%d mfn:%lx track:%d\n", aet_ctrl->start_, aet_ctrl->sl4mfn_, aet_ctrl->track_);
+	printf("start:%d mfn:%lx track:%d open:%d\n", aet_ctrl->start_, aet_ctrl->sl4mfn_, aet_ctrl->track_, aet_ctrl->open_);
+	printf("reversed_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu\n", 
+			aet_ctrl->reversed_aet_magic_count, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count, aet_ctrl->set_aet_magic_count);
+	printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
 	return 0;
 }
