@@ -1,0 +1,462 @@
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8485885
+------------------------
+read
+array_size=100 round=0 maxinter:13107200
+temp:0
+cntw=0
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8494638
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 40689, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 19301841, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5498, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4898136, overflow : 0
+(XEN) 40689 19301841 5498 4898136 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 318544269, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 708940332, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 973258534, overflow : 0
+(XEN) 318544269 708940332 973258534 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8494638 - 8485885
+8753
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8494638
+------------------------
+read
+array_size=100 round=1 maxinter:13107200
+temp:0
+cntw=13107200
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8554732
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 224447, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 32467507, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5336, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4909565, overflow : 0
+(XEN) 224447 32467507 5336 4909565 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1052250583, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1083039603, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1266136778, overflow : 0
+(XEN) 1052250583 1083039603 1266136778 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8554732 - 8494638
+60094
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8554732
+------------------------
+read
+array_size=100 round=2 maxinter:13107200
+temp:18446744073709551615
+cntw=26214400
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8614822
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 248909, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 45209837, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5205, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4865795, overflow : 0
+(XEN) 248909 45209837 5205 4865795 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1098856330, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1091509099, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1303734760, overflow : 0
+(XEN) 1098856330 1091509099 1303734760 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8614822 - 8554732
+60090
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8614822
+------------------------
+read
+array_size=100 round=3 maxinter:13107200
+temp:18446744073709551613
+cntw=39321600
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8674959
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 276222, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 58977819, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5323, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4894395, overflow : 0
+(XEN) 276222 58977819 5323 4894395 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1160128971, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1138736333, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1342806268, overflow : 0
+(XEN) 1160128971 1138736333 1342806268 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8674959 - 8614822
+60137
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8674959
+------------------------
+read
+array_size=100 round=4 maxinter:13107200
+temp:18446744073709551610
+cntw=52428800
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8735042
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 301436, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 71956051, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5634, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4883955, overflow : 0
+(XEN) 301436 71956051 5634 4883955 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1210624039, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1157311012, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1320026676, overflow : 0
+(XEN) 1210624039 1157311012 1320026676 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8735042 - 8674959
+60083
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8735042
+------------------------
+read
+array_size=100 round=5 maxinter:13107200
+temp:18446744073709551606
+cntw=65536000
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8795088
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 327020, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 85119293, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 6089, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4898738, overflow : 0
+(XEN) 327020 85119293 6089 4898738 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1263430963, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1176738146, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1379821456, overflow : 0
+(XEN) 1263430963 1176738146 1379821456 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8795088 - 8735042
+60046
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8795088
+------------------------
+read
+array_size=100 round=6 maxinter:13107200
+temp:18446744073709551601
+cntw=78643200
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8855270
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 353949, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 98236628, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5466, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4882477, overflow : 0
+(XEN) 353949 98236628 5466 4882477 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1317418957, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1199576036, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1390978148, overflow : 0
+(XEN) 1317418957 1199576036 1390978148 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8855270 - 8795088
+60182
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8855270
+------------------------
+read
+array_size=100 round=7 maxinter:13107200
+temp:18446744073709551595
+cntw=91750400
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8915339
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 377948, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 111315487, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5128, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4881727, overflow : 0
+(XEN) 377948 111315487 5128 4881727 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1369109710, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1216572281, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1390278768, overflow : 0
+(XEN) 1369109710 1216572281 1390278768 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8915339 - 8855270
+60069
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8915339
+------------------------
+read
+array_size=100 round=8 maxinter:13107200
+temp:18446744073709551588
+cntw=104857600
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8975428
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 404116, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 124431585, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5213, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4874922, overflow : 0
+(XEN) 404116 124431585 5213 4874922 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1421690418, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1236738965, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1388815918, overflow : 0
+(XEN) 1421690418 1236738965 1388815918 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+8975428 - 8915339
+60089
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:8975428
+------------------------
+read
+array_size=100 round=9 maxinter:13107200
+temp:18446744073709551580
+cntw=117964800
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:9035455
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 429337, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 137525683, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5515, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4872141, overflow : 0
+(XEN) 429337 137525683 5515 4872141 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1473511109, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1259287638, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1436175130, overflow : 0
+(XEN) 1473511109 1259287638 1436175130 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+9035455 - 8975428
+60027
+------------------------
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 1, arg2 = 2
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :OPEN set track way:PAGE_FAULT_COUNT
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:9035455
+------------------------
+read
+array_size=100 round=10 maxinter:13107200
+temp:18446744073709551571
+cntw=131072000
+------------------------
+start:0 mfn:0 track:2 open:1
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:9095512
+------------------------
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 1, arg2 = 0
+(XEN) From cpu: 0
+(XEN) do_xc_reserved_op, CMD = PMU_CMD, cpu = 1, arg1 = 2, arg2 = 1
+(XEN) From cpu: 0
+(XEN) DTLB_LOAD_MISS_COMPLETE val : 455006, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL1 val : 150667561, overflow : 0
+(XEN) DTLB_STORE_MISS_COMPLETE val : 5290, overflow : 0
+(XEN) MEM_UOP_RETIRED_ALL2 val : 4882316, overflow : 0
+(XEN) 455006 150667561 5290 4882316 
+(XEN) 
+(XEN) INST_RETIRED.ANY val : 1525898753, overflow : 0
+(XEN) CPU_CLK_UNHALTED.CORE val : 1282748827, overflow : 0
+(XEN) CPU_CLK_UNHALTED.REF val : 1409362526, overflow : 0
+(XEN) 1525898753 1282748827 1409362526 
+(XEN) 
+(XEN) do_xc_reserved_op, CMD = AET_CMD, cpu = 1, arg1 = 0, arg2 = 0
+(XEN) From cpu: 0
+(XEN) set aet cmd, AET_CMD = SET_OPEN
+(XEN) set track open :CLOSED set track way:L1_TRACK
+------------------------
+9095512 - 9035455
+60057
+------------------------

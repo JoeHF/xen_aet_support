@@ -25,7 +25,11 @@ int get_aet_start(unsigned long *sl4mfn) {
 	return aet_ctrl->start_;
 }
 
-static void set_aet_track_open(enum AET_TRACK_OPEN open) {
+static void set_aet_track_open(enum AET_TRACK_OPEN open, enum TRACK track) {
+	if (open)
+		aet_ctrl->track_ = track;
+	else
+		aet_ctrl->track_ = CLOSED;
 	aet_ctrl->open_ = open;
 }
 
@@ -62,20 +66,91 @@ int l1_set_over(int count) {
 	return count >= CONSECUTIVE_SET_PAGE;
 }
 
-void add_set_aet_magic_count(void) {
+void add_set_aet_magic_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec) {
+	if (aet_ctrl->total_count + 10 < MAX_ARRAY_SIZE) {
+		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
+		aet_ctrl->tvs[aet_ctrl->total_count].type = SET;
+		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
+		aet_ctrl->tvs[aet_ctrl->total_count].l1p = l1p;
+		aet_ctrl->tvs[aet_ctrl->total_count].ec = ec;
+		aet_ctrl->total_count++;
+	}
+
 	aet_ctrl->set_aet_magic_count++;
 }
 
-void add_reversed_aet_magic_count(void) {
+void add_reversed_aet_magic_count(unsigned long va, unsigned long l1) {
+	if (aet_ctrl->total_count + 10 < MAX_ARRAY_SIZE) {
+//		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
+//		aet_ctrl->tvs[aet_ctrl->total_count].type = REVERSED;
+//		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
+//		aet_ctrl->total_count++;
+	}
+
 	aet_ctrl->reversed_aet_magic_count++;
 }
 
-void add_tracked_aet_magic_count(void) {
-	aet_ctrl->tracked_aet_magic_count++;
+void add_tracked_aet_magic_count1(void) {
+	aet_ctrl->tracked_aet_magic_count1++;
+}
+
+void add_tracked_aet_magic_count2(void) {
+	aet_ctrl->tracked_aet_magic_count2++;
 }
 
 void add_page_fault_count(void) {
 	aet_ctrl->page_fault_count++;
+}
+
+void add_last_shadow_l1e(unsigned long sl1mfn, unsigned long va) {
+	int pos = aet_ctrl->last_pte_end;
+	while (pos != aet_ctrl->last_pte_start) {
+		if (aet_ctrl->lps[pos].va == va) {
+			return;
+		}
+		else {
+			pos = (pos + 1) % HOT_SET_SIZE;
+		}
+	}
+
+	pos = aet_ctrl->last_pte_start;
+	aet_ctrl->last_pte_start = (aet_ctrl->last_pte_start + 1) % HOT_SET_SIZE;
+	aet_ctrl->lps[pos].sl1mfn = sl1mfn;
+	aet_ctrl->lps[pos].va = va;
+}
+
+void get_last_shadow_l1e(unsigned long *sl1mfn, unsigned long *va) {
+	int pos = aet_ctrl->last_pte_end;
+	if ((aet_ctrl->last_pte_start + 1) % HOT_SET_SIZE == aet_ctrl->last_pte_end) {
+		*va = aet_ctrl->lps[pos].va;
+		*sl1mfn = aet_ctrl->lps[pos].sl1mfn;
+		aet_ctrl->last_pte_end = (aet_ctrl->last_pte_end + 1) % HOT_SET_SIZE;
+	}
+	else {
+		*va = 0;
+		*sl1mfn = 0;
+	}
+}
+
+void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec) {
+	aet_ctrl->user_mode_fault++;
+	if (aet_ctrl->total_count + 10 < MAX_ARRAY_SIZE) {
+		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
+		aet_ctrl->tvs[aet_ctrl->total_count].type = USER_MODE;
+		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
+		aet_ctrl->tvs[aet_ctrl->total_count].l1p = l1p;
+		aet_ctrl->tvs[aet_ctrl->total_count].ec = ec;
+		aet_ctrl->total_count++;
+	}
+
+}
+
+void add_reserved_bit_fault_count(void) {
+	aet_ctrl->reserved_bit_fault++;
+}
+
+void add_both_fault_count(void) {
+	aet_ctrl->both_fault++;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
@@ -135,8 +210,8 @@ void set_aet_cmd(enum AET_CMD_OP aet_cmd, unsigned long arg1, unsigned long arg2
 			printk("no op\n");
 			break;
 		case SET_OPEN:
-			printk("set track open :%s\n", OPEN_NAME[arg1]);
-			set_aet_track_open(arg1);
+			printk("set track open :%s set track way:%s\n", OPEN_NAME[arg1], TRACK_NAME[arg2]);
+			set_aet_track_open(arg1, arg2);
 			break;
 		case SET_TRACK:
 			printk("set track way :%s\n", TRACK_NAME[arg1]);
