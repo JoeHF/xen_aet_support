@@ -66,13 +66,14 @@ int l1_set_over(int count) {
 	return count >= CONSECUTIVE_SET_PAGE;
 }
 
-void add_set_aet_magic_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec) {
+void add_set_aet_magic_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec, unsigned long mc) {
 	if (aet_ctrl->total_count + 10 < MAX_ARRAY_SIZE) {
 		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
 		aet_ctrl->tvs[aet_ctrl->total_count].type = SET;
 		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
 		aet_ctrl->tvs[aet_ctrl->total_count].l1p = l1p;
 		aet_ctrl->tvs[aet_ctrl->total_count].ec = ec;
+		aet_ctrl->tvs[aet_ctrl->total_count].mc = mc;
 		aet_ctrl->total_count++;
 	}
 
@@ -132,7 +133,7 @@ void get_last_shadow_l1e(unsigned long *sl1mfn, unsigned long *va) {
 	}
 }
 
-void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec) {
+void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec, unsigned long mc) {
 	aet_ctrl->user_mode_fault++;
 	if (aet_ctrl->total_count + 10 < MAX_ARRAY_SIZE) {
 		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
@@ -140,6 +141,8 @@ void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long
 		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
 		aet_ctrl->tvs[aet_ctrl->total_count].l1p = l1p;
 		aet_ctrl->tvs[aet_ctrl->total_count].ec = ec;
+		aet_ctrl->tvs[aet_ctrl->total_count].mc = mc;
+		
 		aet_ctrl->total_count++;
 	}
 
@@ -151,6 +154,66 @@ void add_reserved_bit_fault_count(void) {
 
 void add_both_fault_count(void) {
 	aet_ctrl->both_fault++;
+}
+
+/* The following function is used for aet calculation */
+const unsigned long domain = 256;
+static unsigned long domain_value_to_index(unsigned long value)
+{
+    unsigned long loc = 0, step = 1;
+    unsigned long index = 0;
+    while (loc + step * domain < value) {
+        loc += step * domain;
+        step *= 2;
+        index += domain;
+    }
+
+    while (loc < value) {
+        index++;
+        loc += step;
+    }
+    return index;
+}
+
+static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned long new_mc) {
+	unsigned long compressed_dis;
+	if (old_mc > new_mc) {
+		printk("[WARNING] old mem counter is larger than the new mem counter\n");
+		return;
+	}
+
+	compressed_dis = domain_value_to_index(new_mc - old_mc);	
+	//printk("real dis:%lu compressed_dis:%lu\n", new_mc - old_mc, compressed_dis);
+	if (compressed_dis >= MAX_PAGE_NUM) {
+		printk("[WARNING] compressed dis is larger than array size new_mc:%lu old_mc:%lu compressed_dis:%lu\n", new_mc, old_mc, compressed_dis);
+		return;
+	}
+
+	aet_ctrl->aet_hist_[domain_id - 1][compressed_dis]++;
+}
+
+void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter) {
+	int key;
+	int hash_pos = 0;
+	key = mfn % HASH;
+	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
+		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == mfn) {
+			add_to_aet_histogram(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter);
+			add_user_mode_fault_count(mfn, 0, 0, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter); // for debug	
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->tot_ref_[domain_id - 1]++;
+			return;
+		}
+
+		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == 0) {
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn = mfn;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->node_count_[domain_id - 1]++;
+			return;
+		}
+	}
+
+	aet_ctrl->hash_conflict_num++;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)

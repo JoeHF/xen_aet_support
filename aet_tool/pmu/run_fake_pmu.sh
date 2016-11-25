@@ -11,7 +11,7 @@ xl vcpu-pin 0 0 $dom0_cpu
 xl vcpu-pin 1 0 $domu_cpu
 XC_DIR=../control
 PMU_DIR=./
-./a.out 2 1 1 2 # open monitor
+./a.out 2 1 1 0 # open monitor
 xl dm -c
 echo "------------------------"
 $XC_DIR/xc -r
@@ -32,9 +32,19 @@ $XC_DIR/xc -s 1 > tmp.txt
 cat tmp.txt
 PF2=`cat tmp.txt | grep "page fault" | awk -F ':' '{print $2}'`
 echo "------------------------"
-xl dm -c | tail -n 16 
+xl dm | tail -n 12
+mem1=`xl dm | tail -n 16 | grep "MEM_UOP_RETIRED_ALL1" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
+mem2=`xl dm | tail -n 16 | grep "MEM_UOP_RETIRED_ALL2" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
+mem=$(($mem1+$mem2))
+dtlb1=`xl dm | tail -n 16 | grep "DTLB_LOAD_MISS_COMPLETE" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
+dtlb2=`xl dm | tail -n 16 | grep "DTLB_STORE_MISS_COMPLETE" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
+dtlb=$(($dtlb1+$dtlb2))
+echo "mem1:$mem1 mem2:$mem2 mem:$mem"
+echo "dtlb1:$dtlb1 dtlb2:$dtlb2 dtlb:$dtlb"
+echo "------------------------"
+$XC_DIR/xc -c $mem
 ./a.out 2 1 0 0 #close monitor
-xl dm -c
+xl dm -c >> /dev/null
 echo "------------------------"
 echo "$PF2 - $PF1"
 PFN=$(($PF2-$PF1))

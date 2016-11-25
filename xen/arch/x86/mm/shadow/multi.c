@@ -1786,7 +1786,7 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 		   	&& (sl1p->l1 & SH_L1E_AET_MAGIC) == 0) {
 			if (sl1p->l1 != ptr_sl1e->l1) {
 				if (count != va_offset) {
-					add_set_aet_magic_count(va_start, sl1p->l1, (unsigned long)sl1p, 0);
+					add_set_aet_magic_count(va_start, sl1p->l1, (unsigned long)sl1p, 0, 0);
 					sl1p->l1 |= SH_L1E_AET_MAGIC;
 					sl1p->l1 &= (~user_bit);
 	//				flush_tlb_one_local(va_start);
@@ -3081,7 +3081,7 @@ static int sh_page_fault(struct vcpu *v,
 #endif
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-	unsigned long long mem_counter;
+	unsigned long mem_counter;
 #endif
 #endif
 
@@ -3488,7 +3488,6 @@ static int sh_page_fault(struct vcpu *v,
 	}
 
 	if (regs->error_code & PFEC_user_mode) {
-		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code);
 
 		if (guest_l2e_get_flags(gw.l2e) & _PAGE_PSE) {
 			printk("[joe] find big page\n");
@@ -3498,32 +3497,29 @@ static int sh_page_fault(struct vcpu *v,
 			set_aet_magic(sl1mfn, ptr_sl1e, va);
 		}
 	}
-
+/*
 	if (is_aet_pf == 1) {
-		mem_counter = pmu_mem_return(0, 0);
 		//printk("[joe] find aet magic before count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx error_code:%x\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn, regs->error_code);
-		add_tracked_aet_magic_count1();
 		reverse_l1_aet_magic(sl1mfn, va);
-		regs->error_code &= ~PFEC_reserved_bit;
-		/*
 		if (regs->error_code & PFEC_user_mode) {
 			regs->error_code &= ~PFEC_user_mode;
 		}
-		*/
 		//printk("[joe] find aet magic after count:%llu va:%lx ptr_sl1e:%p %lx guest_table:%lx\n", count, va, ptr_sl1e, ptr_sl1e->l1, current->arch.shadow_table[0].pfn);
 		//printk("[joe] after reverse reversed/set:%llu/%llu\n",
 		//		reversed_aet_magic_count, set_aet_magic_count);
 	}
-	else if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
-		//printk("[joe] WARNING there is unrepaired aet magic pte va:%lx error code:%x ptr_sl1e:%lx\n", va, regs->error_code, ptr_sl1e->l1);
-		add_tracked_aet_magic_count2();
+	*/
+	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
+		unsigned long mfn;
+		mem_counter = pmu_mem_return(1, 0);
+		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
+		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
+		//printk("[joe] WARNING there is unrepaired aet magic pte va:%lx error code:%x ptr_sl1e:%lx mfn:%lx counter:%lu\n", va, regs->error_code, ptr_sl1e->l1, mfn, mem_counter);
+		if (mfn != 0)
+			track_aet_fault(v->domain->domain_id, mfn, mem_counter);
+		add_tracked_aet_magic_count1();
 		reverse_l1_aet_magic(sl1mfn, va);
 		regs->error_code &= ~PFEC_reserved_bit;
-		/*
-		if (regs->error_code & PFEC_user_mode) {
-			regs->error_code &= ~PFEC_user_mode;
-		}
-		*/
 	}
 
 	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
@@ -3531,11 +3527,6 @@ static int sh_page_fault(struct vcpu *v,
 	}
 
 	count++;
-	if (is_l1_track()/* && count % CONSECUTIVE_SET_PAGE == 0*/) {
-		//printk("[joe] set aet magic va:%lx ptr_sl1e:%lx\n", va, ptr_sl1e->l1);
-		//set_aet_magic(sl1mfn, ptr_sl1e, va);
-        //flush_tlb_mask(v->domain->domain_dirty_cpumask);
-	}
 #endif
 #endif
 
