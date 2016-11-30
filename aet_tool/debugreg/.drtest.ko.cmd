@@ -1,0 +1,1 @@
+cmd_/houfang/xen-4.5.1/aet_tool/debugreg/drtest.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /houfang/xen-4.5.1/aet_tool/debugreg/drtest.ko /houfang/xen-4.5.1/aet_tool/debugreg/drtest.o /houfang/xen-4.5.1/aet_tool/debugreg/drtest.mod.o
