@@ -3,7 +3,7 @@
 #include <xen/smp.h>
 #include <public/aet.h>
 
-static char* CMD_NAME[3] = {"INVALID", "PMU_CMD", "AET_CMD"};
+static char* CMD_NAME[4] = {"INVALID", "PMU_CMD", "AET_CMD", "DEBUGREG_CMD"};
 
 struct event {
 	char *name;
@@ -346,6 +346,9 @@ unsigned long do_xc_reserved_op(enum CMD_OP cmd, unsigned long arg0, unsigned lo
 			break;
 		case AET_CMD:
 			set_aet_cmd(arg0, arg1, arg2);
+			break;
+		case DEBUGREG_CMD:
+			hc_set_debug_reg(arg0, arg1);
 			break;
 		default:
 			printk("do_xc_reserved_op, invalid AET_CMD:%d\n", cmd);

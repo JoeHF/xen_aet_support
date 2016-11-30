@@ -551,6 +551,7 @@ static void do_trap(struct cpu_user_regs *regs, int use_error_code)
     unsigned long fixup;
 
     DEBUGGER_trap_entry(trapnr, regs);
+	printk("[joe]%s eip:%lx\n", __func__, regs->eip);
 
     if ( guest_mode(regs) )
     {
@@ -3398,6 +3399,7 @@ void do_debug(struct cpu_user_regs *regs)
 {
     struct vcpu *v = current;
 
+	printk("[joe] %s\n", __func__);
     DEBUGGER_trap_entry(TRAP_debug, regs);
 
     if ( !guest_mode(regs) )
@@ -3812,8 +3814,10 @@ long set_debugreg(struct vcpu *v, unsigned int reg, unsigned long value)
          */
         value &= 0xffffefff; /* reserved bits => 0 */
         value |= 0xffff0ff0; /* reserved bits => 1 */
-        if ( v == curr ) 
+        if ( v == curr ) {
             write_debugreg(6, value);
+			printk("write debugreg 6:%lx\n", value);
+		}
         break;
     case 7:
         /*
@@ -3859,13 +3863,16 @@ long set_debugreg(struct vcpu *v, unsigned int reg, unsigned long value)
                 break;
             }
         }
-        if ( v == curr )
+        if ( v == curr ) {
+			printk("write debugreg 7:%lx\n", value);
             write_debugreg(7, value);
+		}
         break;
     default:
         return -EINVAL;
     }
 
+	printk("[joe]reg:%u value:%lx\n", reg, value);
     v->arch.debugreg[reg] = value;
     return 0;
 }

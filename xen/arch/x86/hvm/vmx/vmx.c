@@ -81,6 +81,7 @@ static void vmx_cpuid_intercept(
     unsigned int *ecx, unsigned int *edx);
 static void vmx_wbinvd_intercept(void);
 static void vmx_fpu_dirty_intercept(void);
+static void vmx_set_debugreg_for_sampling(struct vcpu *v, unsigned long va);
 static int vmx_msr_read_intercept(unsigned int msr, uint64_t *msr_content);
 static int vmx_msr_write_intercept(unsigned int msr, uint64_t msr_content);
 static void vmx_invlpg_intercept(unsigned long vaddr);
@@ -1485,6 +1486,7 @@ static void vmx_inject_trap(struct hvm_trap *trap)
     switch ( _trap.vector )
     {
     case TRAP_debug:
+		printk("[joe] %s\n", __func__);
         if ( guest_cpu_user_regs()->eflags & X86_EFLAGS_TF )
         {
             __restore_debug_registers(curr);
@@ -1755,6 +1757,9 @@ static struct hvm_function_table __initdata vmx_function_table = {
     .cpuid_intercept      = vmx_cpuid_intercept,
     .wbinvd_intercept     = vmx_wbinvd_intercept,
     .fpu_dirty_intercept  = vmx_fpu_dirty_intercept,
+#ifdef AET_PF
+	.set_debugreg_for_s   = vmx_set_debugreg_for_sampling,
+#endif
     .msr_read_intercept   = vmx_msr_read_intercept,
     .msr_write_intercept  = vmx_msr_write_intercept,
     .invlpg_intercept     = vmx_invlpg_intercept,
@@ -1881,6 +1886,18 @@ static void vmx_fpu_dirty_intercept(void)
         curr->arch.hvm_vcpu.hw_cr[0] &= ~X86_CR0_TS;
         __vmwrite(GUEST_CR0, curr->arch.hvm_vcpu.hw_cr[0]);
     }
+}
+
+static void vmx_set_debugreg_for_sampling(struct vcpu *v, unsigned long va)
+{
+	unsigned long addr;
+
+    vmx_vmcs_enter(v);
+	__vmread(GUEST_LINEAR_ADDRESS, &addr);
+	set_debugreg(v, 0, va);
+	__vmwrite(GUEST_DR7, 0xbbbb27ff);
+	printk("[joe]%s va:%lx addr:%lx domain-id:%d\n", __func__, va, addr, v->domain->domain_id);
+	vmx_vmcs_exit(v);
 }
 
 static void vmx_cpuid_intercept(
@@ -2943,6 +2960,7 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 
         perfc_incra(cause_vector, vector);
 
+		//printk("[joe] %s trap vector:%d\n", __func__, vector);
         switch ( vector )
         {
         case TRAP_debug:
@@ -2950,6 +2968,7 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
              * Updates DR6 where debugger can peek (See 3B 23.2.1,
              * Table 23-1, "Exit Qualification for Debug Exceptions").
              */
+			printk("[joe] %s trap debug:%d\n", __func__, vector);
             __vmread(EXIT_QUALIFICATION, &exit_qualification);
             HVMTRACE_1D(TRAP_DEBUG, exit_qualification);
             write_debugreg(6, exit_qualification | 0xffff0ff0);

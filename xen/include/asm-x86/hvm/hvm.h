@@ -161,6 +161,7 @@ struct hvm_function_table {
         unsigned int *ecx, unsigned int *edx);
     void (*wbinvd_intercept)(void);
     void (*fpu_dirty_intercept)(void);
+	void (*set_debugreg_for_s)(struct vcpu *v, unsigned long va);
     int (*msr_read_intercept)(unsigned int msr, uint64_t *msr_content);
     int (*msr_write_intercept)(unsigned int msr, uint64_t msr_content);
     void (*invlpg_intercept)(unsigned long vaddr);

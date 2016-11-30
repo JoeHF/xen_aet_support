@@ -9,6 +9,7 @@
 #include <asm/bitops.h>
 #include <asm/apic.h>
 #include <xen/kernel.h>
+#include <public/sched.h>
 
 static struct AET_ctrl *aet_ctrl;
 static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
@@ -195,12 +196,20 @@ static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned l
 void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter) {
 	int key;
 	int hash_pos = 0;
+	unsigned long page_fault_diff;
+	unsigned long mc_diff;
 	key = mfn % HASH;
 	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
 		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == mfn) {
-			add_to_aet_histogram(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter);
-			add_user_mode_fault_count(mfn, 0, 0, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter); // for debug	
+			page_fault_diff = aet_ctrl->page_fault_count - aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf; 
+			/* sub the additional mem ref by shadow page fault */
+			mc_diff = page_fault_diff * 20;
+			add_to_aet_histogram(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter - mc_diff);
+
+			add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
+
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->tot_ref_[domain_id - 1]++;
 			return;
 		}
@@ -208,12 +217,87 @@ void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter
 		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == 0) {
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn = mfn;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->node_count_[domain_id - 1]++;
 			return;
 		}
 	}
 
 	aet_ctrl->hash_conflict_num++;
+}
+
+/* The folloing funciont is used for debug register */
+typedef struct {
+	unsigned long dr0;
+	unsigned long dr6;
+	unsigned long dr7;
+	struct vcpu *v;
+} dr_on_cpu;
+
+void __set_debug_reg(void *info) {
+	unsigned long dr0, dr6, dr7;
+	unsigned int cpu_id;
+	struct vcpu *v;
+	dr_on_cpu *doc = (dr_on_cpu *)info;
+	cpu_id = smp_processor_id();
+	dr0 = doc->dr0;
+	dr6 = doc->dr6;
+	dr7 = doc->dr7;
+	v = doc->v;
+	//write_debugreg(0, dr0);
+	write_debugreg(6, dr6);
+	//write_debugreg(7, dr7);
+
+	hvm_funcs.set_debugreg_for_s(v, dr0);
+	printk("[joe]%s cpu_id:%u, dr0:%lx, dr6:%lx, dr7:%lx\n", __func__, cpu_id, dr0, dr6, dr7);
+}
+
+void set_debug_reg(unsigned long va, int cpu_id, void *v) {
+	dr_on_cpu doc;
+	cpumask_t c;
+	cpumask_clear(&c);
+	cpumask_set_cpu(cpu_id, &c);
+
+	cpu_id = smp_processor_id();
+	doc.dr0 = va;
+	doc.dr6 = DEBUG_DR6;
+	doc.dr7 = DEBUG_DR7;
+	doc.v = (struct vcpu *)v;
+
+	printk("[joe]%s va:%lx cpu_id:%u\n", __func__, va, cpu_id);
+	on_selected_cpus(&c, __set_debug_reg, (void *)(&doc), -1);
+}
+
+void __hc_set_debug_reg(void *info) {
+	unsigned long dr0, dr6, dr7;
+	unsigned int cpu_id;
+	dr_on_cpu *doc = (dr_on_cpu *)info;
+	cpu_id = smp_processor_id();
+	dr0 = doc->dr0;
+	dr6 = doc->dr6;
+	dr7 = doc->dr7;
+	write_debugreg(0, dr0);
+	write_debugreg(6, dr6);
+	write_debugreg(7, dr7);
+
+	printk("[joe]%s cpu_id:%u, dr0:%lx, dr6:%lx, dr7:%lx\n", __func__, cpu_id, dr0, dr6, dr7);
+}
+
+void hc_set_debug_reg(unsigned long va, int cpu_id) {
+	dr_on_cpu doc;
+	cpumask_t c;
+	cpumask_clear(&c);
+	cpumask_set_cpu(cpu_id, &c);
+
+	cpu_id = smp_processor_id();
+	doc.dr0 = va;
+	doc.dr6 = DEBUG_DR6;
+	doc.dr7 = DEBUG_DR7;
+
+	printk("[joe]%s va:%lx cpu_id:%u\n", __func__, va, cpu_id);
+	on_selected_cpus(&c, __hc_set_debug_reg, (void *)(&doc), -1);
+}
+void track_debug_reg(unsigned long va) {
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)

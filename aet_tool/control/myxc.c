@@ -19,10 +19,10 @@ static char* NAME[3] = {"SET", "REVERSED", "USER_MODE"};
 
 //#ifdef AET_PF
 static void aet_process(int dom, unsigned long n) {
-    int STEP = 32;
+    int STEP = 256;
     unsigned long long m = aet_ctrl->node_count_[dom] * STEP;
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
-    unsigned long long sum = 0; long long T = 0;
+    unsigned long long T = 0;
     int domain = 256;
     double tot = 0;
 	//modified rtd 1
@@ -36,6 +36,7 @@ static void aet_process(int dom, unsigned long n) {
 
     //double N = tott + m;
     double N = tott + 1.0 * tott / (n-m) * m;
+	double sum = 0.0;
 	printf("endless:%lf\n", 1.0 * tott / (n - m) * m / N);
 	printf("m:%lu\n", m);
 	printf("n:%lu\n", n);
@@ -72,7 +73,7 @@ static void aet_process(int dom, unsigned long n) {
 		}
 
         if (c % PGAP == 0) {
-			fprintf(fsz, "dT:%d\n", dT);
+			fprintf(fsz, "dT:%d sum:%lf\n", dT, sum);
 			if (sum <= N) {
 				fprintf(fsz, "%.6lf\n", 1.0 * (N - sum) / N);
 			}

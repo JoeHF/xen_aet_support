@@ -1,10 +1,9 @@
 #ifndef _PUBLIC_AET_H
 #define _PUBLIC_AET_H
-
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
-#define CONSECUTIVE_SET_PAGE 16 
+#define CONSECUTIVE_SET_PAGE 2 
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
 #define MAX_ARRAY_SIZE 40000
@@ -13,6 +12,20 @@
 
 #define HASH 49997
 #define HASH_CONFLICT_NUM 2
+
+#define DEBUG_DR6 0xffff0fff
+#define DEBUG_DR7 0xbbbb07ff
+
+#define write_debugreg(reg, val) do {                       \
+	unsigned long __val = val;                              \
+	asm volatile ( "mov %0,%%db" #reg : : "r" (__val) );    \
+} while (0)
+
+#define read_debugreg(reg) ({                               \
+    unsigned long __val;                                    \
+    asm volatile ( "mov %%db" #reg ",%0" : "=r" (__val) );  \
+    __val;                                                  \
+})
 
 enum AET_CMD_OP
 {
@@ -31,7 +44,7 @@ enum AET_TRACK_OPEN
 
 enum CMD_OP
 {
-	INVALID=0, PMU_CMD=1, AET_CMD=2
+	INVALID=0, PMU_CMD=1, AET_CMD=2,DEBUGREG_CMD=3
 };
 
 struct page_reuse_time {
@@ -60,6 +73,7 @@ struct last_pte {
 struct hash_node {
 	unsigned long mfn;
 	unsigned long mem_counter;
+	unsigned long pf;
 };
 
 struct AET_ctrl {
@@ -113,4 +127,11 @@ int get_aet_start(unsigned long *sl4mfn);
 
 /* The following function is used for aet calculation */
 void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter);
+
+/* The folloing funciont is used for debug register*/
+void set_debug_reg(unsigned long va, int cpu_id, void *v);
+void hc_set_debug_reg(unsigned long va, int cpu_id);
+void track_debug_reg(unsigned long va);
+
+
 #endif
