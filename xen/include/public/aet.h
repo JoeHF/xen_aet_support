@@ -7,6 +7,7 @@
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
 #define MAX_ARRAY_SIZE 40000
+#define MAX_PENDING_PAGE 1000
 
 #define HOT_SET_SIZE 10
 
@@ -26,6 +27,7 @@
     asm volatile ( "mov %%db" #reg ",%0" : "=r" (__val) );  \
     __val;                                                  \
 })
+
 
 enum AET_CMD_OP
 {
@@ -76,6 +78,11 @@ struct hash_node {
 	unsigned long pf;
 };
 
+struct pending_node {
+	unsigned long sl1mfn;
+	unsigned long va;
+};
+
 struct AET_ctrl {
 	int start_;
 	enum AET_TRACK_OPEN open_;
@@ -99,6 +106,9 @@ struct AET_ctrl {
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
 	unsigned long hash_conflict_num;
+	/* add to pending set */
+	unsigned long set_num;
+	struct pending_node pds[MAX_PENDING_PAGE];
 };
 
 void aet_init(void);
@@ -128,10 +138,13 @@ int get_aet_start(unsigned long *sl4mfn);
 /* The following function is used for aet calculation */
 void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter);
 
-/* The folloing funciont is used for debug register*/
+/* The following funcion is used for debug register*/
 void set_debug_reg(unsigned long va, int cpu_id, void *v);
 void hc_set_debug_reg(unsigned long va, int cpu_id);
 void track_debug_reg(unsigned long va);
 
+/* The following function is used to add to pending set */
+void add_to_pending_page(unsigned long sl1mfn, unsigned long va);
+void set_pending_page(void);
 
 #endif

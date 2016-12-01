@@ -2769,6 +2769,15 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
     struct vcpu *v = current;
 #ifdef AET_PF
 	// add by houfang
+	if (is_l1_track()) {
+		if (v->domain->domain_id == 1) {
+			aet_count++;
+		//	if (aet_count % 100 == 0) {
+				set_pending_page();
+		//	}
+		}
+	}
+
 	if (is_l4_track()) {
 		mfn_t sl4mfn;
 		mfn_t gmfn;

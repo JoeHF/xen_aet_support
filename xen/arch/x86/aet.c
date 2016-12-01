@@ -300,6 +300,86 @@ void hc_set_debug_reg(unsigned long va, int cpu_id) {
 void track_debug_reg(unsigned long va) {
 }
 
+/* The following function is used to add to pending set */
+#define L1_MASK  ((1UL << L2_PAGETABLE_SHIFT) - 1)
+void add_to_pending_page(unsigned long sl1mfn, unsigned long va) {
+	unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
+	int i;
+	// remove duplicate one
+	for (i = aet_ctrl->set_num - 1 ; i >= 0 ; i--) {
+		if (aet_ctrl->pds[i].sl1mfn == sl1mfn)
+			return;
+	}
+
+	if (aet_ctrl->set_num >= MAX_PENDING_PAGE) {
+		printk("[joe]%s exceed MAX_PENDING_PAGE_SIZE\n", __func__);
+		return;
+	}
+
+	aet_ctrl->pds[aet_ctrl->set_num].sl1mfn = sl1mfn;
+	aet_ctrl->pds[aet_ctrl->set_num].va = va_start;
+	aet_ctrl->set_num++;
+
+}
+
+/* steal from shadow code */
+typedef l1_pgentry_t shadow_l1e_t;
+#define SH_type_l1_64_shadow   (8U) /* shadowing a 64-bit L1 page */
+#define SH_type_fl1_64_shadow  (9U) /* L1 shadow for 64-bit 2M superpg */
+#define SH_type_l1_shadow  SH_type_l1_64_shadow
+#define SH_type_fl1_shadow SH_type_fl1_64_shadow
+#define SH_L1E_AET_MAGIC 0x7ff8000000000400ULL
+static inline u32 shadow_l1e_get_flags(shadow_l1e_t sl1e)
+{ return l1e_get_flags(sl1e); }
+
+void set_pending_page() {
+	int i, j;
+	unsigned long sl1mfn;
+	shadow_l1e_t *sl1e;
+	unsigned long va;
+	unsigned long count = 0;
+	unsigned long user_bit = 0x4;
+	if (aet_ctrl->set_num == 0)
+		return;
+	//else
+	//	printk("[joe]%s set_num:%lu\n", __func__, aet_ctrl->set_num);
+
+	for (j = 0 ; j < aet_ctrl->set_num ; j++) {
+		shadow_l1e_t *sp;
+		sl1mfn = aet_ctrl->pds[j].sl1mfn;
+		sp = map_domain_page(sl1mfn);
+	//	printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
+		va = aet_ctrl->pds[j].va;
+		if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
+			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
+			for (i = 0 ; i < CONSECUTIVE_SET_PAGE ; i++) {
+				sl1e = sp + i;
+				if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
+					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
+					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
+					&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
+						add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 1, 0);
+						count++;
+						sl1e->l1 |= SH_L1E_AET_MAGIC;
+						sl1e->l1 &= (~user_bit);
+						flush_tlb_one_local(va);
+				}
+				
+				va += (1 << 12);
+			}
+		}	
+		else {
+			printk("[WARNING]%s sl1mfn:%lx va:%lx is not a l1 shadow page\n", __func__, sl1mfn, va);
+		}
+
+		unmap_domain_page(sp);
+	}
+
+	aet_ctrl->set_num = 0;
+	//if (count != 0)
+	//	printk("[joe]%s set %lu page\n", __func__, count);
+}
+
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
 {
     unsigned long page_step, i, mfn, page_nr;

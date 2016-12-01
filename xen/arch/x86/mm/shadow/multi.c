@@ -1740,10 +1740,10 @@ static inline int sh_l4e_is_aet_magic(shadow_l4e_t sl4e) {
 #define SPECIAL_NUM 0x8000000000000000
 #define L1_MASK  ((1UL << L2_PAGETABLE_SHIFT) - 1)
 static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned long va) {
-	unsigned long user_bit = 0x4;
+//	unsigned long user_bit = 0x4;
 	
 	shadow_l1e_t *sl1p;
-	int count = 0, done = 0;
+	int count = 1, done = 0;
 	unsigned long va_start;
 	unsigned long va_offset;
 
@@ -1784,7 +1784,7 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 	va_start = va - (va & L1_MASK & PAGE_MASK);
 	va_offset = ((va & L1_MASK & PAGE_MASK) >> 12);
 
-	if (va_offset > CONSECUTIVE_SET_PAGE)
+	if (va_offset >= CONSECUTIVE_SET_PAGE)
 		return;
 
 	//set_debug_reg(va, 1, current);
@@ -1796,6 +1796,8 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 		return;
 	}
 	
+	add_to_pending_page(sl1mfn, va);
+	//printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
 	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, done, {
 		done = l1_set_over(count);
 		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_USER)
@@ -1805,9 +1807,9 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 //			if (sl1p->l1 != ptr_sl1e->l1) {
 //				if (count != va_offset) {
 					add_set_aet_magic_count(va_start, sl1p->l1, (unsigned long)sl1p, 0, 0);
-					sl1p->l1 |= SH_L1E_AET_MAGIC;
-					sl1p->l1 &= (~user_bit);
-					flush_tlb_one_local(va_start);
+					//sl1p->l1 |= SH_L1E_AET_MAGIC;
+					//sl1p->l1 &= (~user_bit);
+					//flush_tlb_one_local(va_start);
 //					printk("[joe] set aet magic va:%lx sl1p:%p %lx\n", va_start, sl1p, sl1p->l1);
 //				}
 //			}
@@ -3505,26 +3507,27 @@ static int sh_page_fault(struct vcpu *v,
 		add_reserved_bit_fault_count();
 	}
 
+	mem_counter = pmu_mem_return(1, 0);
+	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
+		unsigned long mfn;
+		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
+		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
+		if (mfn != 0)
+			track_aet_fault(v->domain->domain_id, mfn, mem_counter);
+		add_tracked_aet_magic_count1();
+	}
+	
 	if (regs->error_code & PFEC_user_mode) {
-
 		if (guest_l2e_get_flags(gw.l2e) & _PAGE_PSE) {
 			printk("[joe] find big page\n");
 		}
 
-		//add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, 0);
 		if (is_l1_track() && !(guest_l2e_get_flags(gw.l2e) & _PAGE_PSE)) {
 			set_aet_magic(sl1mfn, ptr_sl1e, va);
 		}
 	}
 
 	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
-		unsigned long mfn;
-		mem_counter = pmu_mem_return(1, 0);
-		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
-		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
-		if (mfn != 0)
-			track_aet_fault(v->domain->domain_id, mfn, mem_counter);
-		add_tracked_aet_magic_count1();
 		reverse_l1_aet_magic(sl1mfn, va);
 	//	regs->error_code &= ~PFEC_reserved_bit;
 	}
