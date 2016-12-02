@@ -61,6 +61,7 @@
 #ifdef AET_PF
 #include "../../mm/mm-locks.h"
 #include <public/aet.h>
+#include <xen/time.h>
 #endif
 
 static bool_t __initdata opt_force_ept;
@@ -2762,6 +2763,9 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 }
 #endif
 
+#ifdef AET_PF
+struct tm ts_last;
+#endif
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
     unsigned long exit_qualification, exit_reason, idtv_info, intr_info = 0;
@@ -2771,6 +2775,16 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 	// add by houfang
 	if (is_l1_track()) {
 		if (v->domain->domain_id == 1) {
+			struct tm ts_now;
+			if (aet_count == 0) {
+				ts_last = gmtime(get_localtime(v->domain));
+			}
+			
+			ts_now = gmtime(get_localtime(v->domain)); 
+			if (ts_now.tm_sec > ts_last.tm_sec || ts_now.tm_min > ts_last.tm_min || ts_now.tm_hour > ts_last.tm_hour) {
+				printk("[joe]%s hour:%d minute:%d second:%d\n", __func__, ts_now.tm_hour, ts_now.tm_min, ts_now.tm_sec);
+				ts_last = ts_now;
+			}
 			aet_count++;
 		//	if (aet_count % 100 == 0) {
 				set_pending_page();

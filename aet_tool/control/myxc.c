@@ -94,6 +94,7 @@ void print(int arg) {
 	printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 	printf("total count:%d\n", aet_ctrl->total_count);
 	printf("hash conflict:%llu\n", aet_ctrl->hash_conflict_num);
+	printf("track page set num:%lu\n", aet_ctrl->tracking_page_set_num);
 	
 	if (arg == 1) {
 		FILE *fp;
@@ -140,6 +141,8 @@ void reset() {
 	aet_ctrl->reserved_bit_fault = 0;
 	aet_ctrl->both_fault = 0;
 	aet_ctrl->hash_conflict_num = 0;
+	aet_ctrl->set_num = 0;
+	aet_ctrl->tracking_page_set_num = 0;
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->node_count_, 0, sizeof(aet_ctrl->node_count_));

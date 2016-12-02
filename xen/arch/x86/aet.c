@@ -380,6 +380,27 @@ void set_pending_page() {
 	//	printk("[joe]%s set %lu page\n", __func__, count);
 }
 
+/* The following function is used by add page to track page set
+ * by issue 15
+ */
+void add_to_track_page_set(unsigned long sl1mfn, unsigned long va) {
+	int i;
+	if (aet_ctrl->tracking_page_set_num >= MAX_TRACKING_PAGE) {
+		printk("[WARNING]%s tracking page set num exceeds the max tracking page num:%d\n", __func__, MAX_TRACKING_PAGE);
+		return;
+	}
+
+	for (i = 0 ; i < aet_ctrl->tracking_page_set_num ; i++) {
+		if (aet_ctrl->tracking_page_set_[i].sl1mfn == sl1mfn)
+			return;
+	}
+
+	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].sl1mfn = sl1mfn;
+	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].va = va;
+	aet_ctrl->tracking_page_set_num++;
+	
+}
+
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
 {
     unsigned long page_step, i, mfn, page_nr;

@@ -1796,6 +1796,7 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 		return;
 	}
 	
+	add_to_track_page_set(sl1mfn, va);
 	add_to_pending_page(sl1mfn, va);
 	//printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
 	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, done, {

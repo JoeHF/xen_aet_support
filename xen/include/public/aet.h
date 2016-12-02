@@ -1,13 +1,15 @@
 #ifndef _PUBLIC_AET_H
 #define _PUBLIC_AET_H
+
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
 #define CONSECUTIVE_SET_PAGE 2 
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
-#define MAX_ARRAY_SIZE 40000
+#define MAX_ARRAY_SIZE 20000
 #define MAX_PENDING_PAGE 1000
+#define MAX_TRACKING_PAGE 2000
 
 #define HOT_SET_SIZE 10
 
@@ -109,6 +111,11 @@ struct AET_ctrl {
 	/* add to pending set */
 	unsigned long set_num;
 	struct pending_node pds[MAX_PENDING_PAGE];
+	/* The following variable is used by add page to track page set
+	* by issue 15
+	*/
+	unsigned long tracking_page_set_num;
+	struct pending_node tracking_page_set_[MAX_TRACKING_PAGE];
 };
 
 void aet_init(void);
@@ -147,4 +154,8 @@ void track_debug_reg(unsigned long va);
 void add_to_pending_page(unsigned long sl1mfn, unsigned long va);
 void set_pending_page(void);
 
+/* The following function is used by add page to track page set
+ * by issue 15
+ */
+void add_to_track_page_set(unsigned long sl1mfn, unsigned long va);
 #endif
