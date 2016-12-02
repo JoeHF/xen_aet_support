@@ -332,48 +332,53 @@ typedef l1_pgentry_t shadow_l1e_t;
 static inline u32 shadow_l1e_get_flags(shadow_l1e_t sl1e)
 { return l1e_get_flags(sl1e); }
 
+static void track_l1_page(unsigned long sl1mfn, unsigned long va, unsigned long *count, int set) {
+	shadow_l1e_t *sp, *sl1e;
+	int i;
+	unsigned long user_bit = 0x4;
+	sp = map_domain_page(sl1mfn);
+	if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
+		|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
+		for (i = 0 ; i < CONSECUTIVE_SET_PAGE ; i++) {
+			sl1e = sp + i;
+			if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
+				&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
+				&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
+				&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
+					add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 1, 0);
+					if (set) {
+						(*count)++;
+					//	printk("[joe]%s set aet magic va:%lx sl1mfn:%lx count:%lu\n", __func__, va, sl1mfn, *count);
+						sl1e->l1 |= SH_L1E_AET_MAGIC;
+						sl1e->l1 &= (~user_bit);
+						flush_tlb_one_local(va);
+					}
+			}
+			
+			va += (1 << 12);
+		}
+	}	
+	//else {
+	//	printk("[WARNING]%s sl1mfn:%lx va:%lx is not a l1 shadow page\n", __func__, sl1mfn, va);
+	//}
+}
+
 void set_pending_page() {
-	int i, j;
+	int j;
 	unsigned long sl1mfn;
-	shadow_l1e_t *sl1e;
 	unsigned long va;
 	unsigned long count = 0;
-	unsigned long user_bit = 0x4;
 	if (aet_ctrl->set_num == 0)
 		return;
 	//else
 	//	printk("[joe]%s set_num:%lu\n", __func__, aet_ctrl->set_num);
 
 	for (j = 0 ; j < aet_ctrl->set_num ; j++) {
-		shadow_l1e_t *sp;
 		sl1mfn = aet_ctrl->pds[j].sl1mfn;
-		sp = map_domain_page(sl1mfn);
-	//	printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
 		va = aet_ctrl->pds[j].va;
-		if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
-			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
-			for (i = 0 ; i < CONSECUTIVE_SET_PAGE ; i++) {
-				sl1e = sp + i;
-				if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
-					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
-					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
-					&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
-						add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 1, 0);
-						count++;
-						sl1e->l1 |= SH_L1E_AET_MAGIC;
-						sl1e->l1 &= (~user_bit);
-						flush_tlb_one_local(va);
-				}
-				
-				va += (1 << 12);
-			}
-		}	
-		else {
-			printk("[WARNING]%s sl1mfn:%lx va:%lx is not a l1 shadow page\n", __func__, sl1mfn, va);
-		}
-
-		unmap_domain_page(sp);
-	}
+		add_set_aet_magic_count(va, 0, sl1mfn, 2, 0);
+		track_l1_page(sl1mfn, va, &count, 0);
+	}	
 
 	aet_ctrl->set_num = 0;
 	//if (count != 0)
@@ -385,6 +390,7 @@ void set_pending_page() {
  */
 void add_to_track_page_set(unsigned long sl1mfn, unsigned long va) {
 	int i;
+	unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
 	if (aet_ctrl->tracking_page_set_num >= MAX_TRACKING_PAGE) {
 		printk("[WARNING]%s tracking page set num exceeds the max tracking page num:%d\n", __func__, MAX_TRACKING_PAGE);
 		return;
@@ -396,9 +402,28 @@ void add_to_track_page_set(unsigned long sl1mfn, unsigned long va) {
 	}
 
 	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].sl1mfn = sl1mfn;
-	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].va = va;
+	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].va = va_start;
 	aet_ctrl->tracking_page_set_num++;
 	
+}
+
+void set_all_track_page() {
+	int i;
+	unsigned long sl1mfn;
+	unsigned long va;
+	unsigned long count = 0;
+	if (aet_ctrl->tracking_page_set_num == 0)
+		return;
+	for (i = 0 ; i < aet_ctrl->tracking_page_set_num ; i++) {
+		sl1mfn = aet_ctrl->tracking_page_set_[i].sl1mfn;
+		va = aet_ctrl->tracking_page_set_[i].va;
+		add_set_aet_magic_count(va, 0, sl1mfn, 3, 0);
+		track_l1_page(sl1mfn, va, &count, 1);
+	}	
+
+	// for debug
+	printk("[joe]%s set:%lu/%lu track page\n", __func__, count, aet_ctrl->tracking_page_set_num * CONSECUTIVE_SET_PAGE);
+//	aet_ctrl->tracking_page_set_num = 0;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)

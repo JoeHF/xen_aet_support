@@ -2764,7 +2764,7 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 #endif
 
 #ifdef AET_PF
-struct tm ts_last;
+unsigned long ts_last;
 #endif
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
@@ -2775,20 +2775,21 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 	// add by houfang
 	if (is_l1_track()) {
 		if (v->domain->domain_id == 1) {
-			struct tm ts_now;
+			unsigned long ts_now = get_localtime_us(v->domain);
 			if (aet_count == 0) {
-				ts_last = gmtime(get_localtime(v->domain));
+				ts_last = ts_now; 
 			}
 			
-			ts_now = gmtime(get_localtime(v->domain)); 
-			if (ts_now.tm_sec > ts_last.tm_sec || ts_now.tm_min > ts_last.tm_min || ts_now.tm_hour > ts_last.tm_hour) {
-				printk("[joe]%s hour:%d minute:%d second:%d\n", __func__, ts_now.tm_hour, ts_now.tm_min, ts_now.tm_sec);
+			if (ts_now - ts_last > 50 * 1000) {
+				set_all_track_page();
+			//	printk("[joe]%s ts_last:%lu ts_now:%lu\n", __func__, ts_last, ts_now);
 				ts_last = ts_now;
 			}
 			aet_count++;
-		//	if (aet_count % 100 == 0) {
-				set_pending_page();
-		//	}
+			//if (aet_count % 5 == 0) {
+			//	set_all_track_page();
+	//			set_pending_page();
+			//}
 		}
 	}
 

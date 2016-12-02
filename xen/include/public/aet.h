@@ -158,4 +158,5 @@ void set_pending_page(void);
  * by issue 15
  */
 void add_to_track_page_set(unsigned long sl1mfn, unsigned long va);
+void set_all_track_page(void);
 #endif
