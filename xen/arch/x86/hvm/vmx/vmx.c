@@ -62,6 +62,7 @@
 #include "../../mm/mm-locks.h"
 #include <public/aet.h>
 #include <xen/time.h>
+#include <public/xc_reserved_op.h>
 #endif
 
 static bool_t __initdata opt_force_ept;
@@ -2765,6 +2766,7 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 
 #ifdef AET_PF
 unsigned long ts_last;
+unsigned long ts_last2;
 #endif
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
@@ -2772,24 +2774,30 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
     unsigned int vector = 0;
     struct vcpu *v = current;
 #ifdef AET_PF
+	unsigned long enter_mc = 0;
+	unsigned long enter_mc2 = 0;
+	unsigned long out_mc = 0;
 	// add by houfang
 	if (is_l1_track()) {
 		if (v->domain->domain_id == 1) {
 			unsigned long ts_now = get_localtime_us(v->domain);
+			add_vmexit_num();
 			if (aet_count == 0) {
 				ts_last = ts_now; 
 			}
 			
+			if (ts_now - ts_last2 > 1000) {
+				enter_mc2 = pmu_mem_return(1, 0);
+				ts_last2 = ts_now;
+			}	
+
 			if (ts_now - ts_last > 50 * 1000) {
+				enter_mc = pmu_mem_return(1, 0);
 				set_all_track_page();
-			//	printk("[joe]%s ts_last:%lu ts_now:%lu\n", __func__, ts_last, ts_now);
 				ts_last = ts_now;
 			}
+			
 			aet_count++;
-			//if (aet_count % 5 == 0) {
-			//	set_all_track_page();
-	//			set_pending_page();
-			//}
 		}
 	}
 
@@ -2903,8 +2911,22 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
             goto out;
     }
 
-    if ( unlikely(exit_reason & VMX_EXIT_REASONS_FAILED_VMENTRY) )
+    if ( unlikely(exit_reason & VMX_EXIT_REASONS_FAILED_VMENTRY) ) {
+#ifdef AET_PF
+		if (is_l1_track()) {
+			if (enter_mc != 0) {
+				out_mc = pmu_mem_return(1, 0);
+				add_surplus_mc(enter_mc, out_mc);
+			}
+			else if (enter_mc2 != 0) {
+				out_mc = pmu_mem_return(1, 0);
+				add_surplus_mc2(enter_mc2, out_mc);
+
+			}
+		}
+#endif
         return vmx_failed_vmentry(exit_reason, regs);
+	}
 
     if ( v->arch.hvm_vmx.vmx_realmode )
     {
@@ -2924,6 +2946,18 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
                 perfc_incr(realmode_exits);
                 v->arch.hvm_vmx.vmx_emulate = 1;
                 HVMTRACE_0D(REALMODE_EMULATE);
+#ifdef AET_PF
+				if (is_l1_track()) {
+					if (enter_mc != 0) {
+						out_mc = pmu_mem_return(1, 0);
+						add_surplus_mc(enter_mc, out_mc);
+					}
+					else if (enter_mc2 != 0) {
+						out_mc = pmu_mem_return(1, 0);
+						add_surplus_mc2(enter_mc2, out_mc);
+					}
+				}
+#endif
                 return;
             }
         case EXIT_REASON_EXTERNAL_INTERRUPT:
@@ -2944,6 +2978,18 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
             v->arch.hvm_vmx.vmx_emulate = 1;
             perfc_incr(realmode_exits);
             HVMTRACE_0D(REALMODE_EMULATE);
+#ifdef AET_PF
+			if (is_l1_track()) {
+				if (enter_mc != 0) {
+					out_mc = pmu_mem_return(1, 0);
+					add_surplus_mc(enter_mc, out_mc);
+				}
+				else if (enter_mc2 != 0) {
+					out_mc = pmu_mem_return(1, 0);
+					add_surplus_mc2(enter_mc2, out_mc);
+				}
+			}
+#endif
             return;
         }
     }
@@ -3376,6 +3422,18 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 out:
     if ( nestedhvm_vcpu_in_guestmode(v) )
         nvmx_idtv_handling();
+#ifdef AET_PF
+	if (is_l1_track()) {
+		if (enter_mc != 0) {
+			out_mc = pmu_mem_return(1, 0);
+			add_surplus_mc(enter_mc, out_mc);
+		}
+		else if (enter_mc2 != 0) {
+			out_mc = pmu_mem_return(1, 0);
+			add_surplus_mc2(enter_mc2, out_mc);
+		}
+	}
+#endif
 }
 
 void vmx_vmenter_helper(const struct cpu_user_regs *regs)

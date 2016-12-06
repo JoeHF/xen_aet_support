@@ -116,6 +116,11 @@ struct AET_ctrl {
 	*/
 	unsigned long tracking_page_set_num;
 	struct pending_node tracking_page_set_[MAX_TRACKING_PAGE];
+	unsigned long surplus_mc;
+	unsigned long surplus_count;
+	unsigned long surplus_mc2;
+	unsigned long surplus_count2;
+	unsigned long vmexit_num;
 };
 
 void aet_init(void);
@@ -143,7 +148,7 @@ void set_aet_start(unsigned long sl4mfn);
 int get_aet_start(unsigned long *sl4mfn);
 
 /* The following function is used for aet calculation */
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter);
+void track_aet_fault(int domain_id, unsigned long mfn);
 
 /* The following funcion is used for debug register*/
 void set_debug_reg(unsigned long va, int cpu_id, void *v);
@@ -159,4 +164,9 @@ void set_pending_page(void);
  */
 void add_to_track_page_set(unsigned long sl1mfn, unsigned long va);
 void set_all_track_page(void);
+
+void add_surplus_mc(unsigned long emc, unsigned long omc);
+void add_surplus_mc2(unsigned long emc, unsigned long omc);
+void add_vmexit_num(void);
+unsigned long get_mem_counter(void);
 #endif

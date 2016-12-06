@@ -1,6 +1,7 @@
 #ifndef _PUBLIC_XC_RESERVED_OP_H
 #define _PUBLIC_XC_RESERVED_OP_H
 
+#define PRINT_BIT_CLEAR (1 << 5)
 #define IA32_PMC0 0xC1
 #define IA32_PERFEVTSEL0 0x186
 #define IA32_PERF_GLOBAL_STATUS 0x38E
@@ -34,4 +35,6 @@ unsigned long stop_pmu_return(int cpu, int arg2);
 unsigned long pmu_l3_return(int cpu, int arg2);
 unsigned long pmu_mem_return(int cpu, int arg2);
 
+void start_pmu(int cpu, int arg2);
+void stop_pmu(int cpu, int arg2);
 #endif

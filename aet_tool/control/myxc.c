@@ -94,8 +94,12 @@ void print(int arg) {
 	printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 	printf("total count:%d\n", aet_ctrl->total_count);
 	printf("hash conflict:%llu\n", aet_ctrl->hash_conflict_num);
-	printf("track page set num:%lu\n", aet_ctrl->tracking_page_set_num);
+	if (aet_ctrl->surplus_count != 0)
+		printf("track page set num:%lu, surplus mc:%lu surplus avg:%lu\n", aet_ctrl->tracking_page_set_num, aet_ctrl->surplus_mc, aet_ctrl->surplus_mc / aet_ctrl->surplus_count);
 	
+	if (aet_ctrl->surplus_count2 != 0)
+		printf("surplus mc2:%lu surplus2 avg:%lu vmexit_num:%lu\n", aet_ctrl->surplus_mc2, aet_ctrl->surplus_mc2 / aet_ctrl->surplus_count2, aet_ctrl->vmexit_num);
+
 	if (arg == 1) {
 		FILE *fp;
 		fp = fopen("va.txt", "w");
@@ -125,6 +129,7 @@ void print(int arg) {
 			fprintf(fp2, "i:%d hist:%lu\n", i, aet_ctrl->aet_hist_[0][i]);
 		}
 
+		fclose(fp1);
 		fclose(fp2);
 	}
 	
@@ -143,12 +148,18 @@ void reset() {
 	aet_ctrl->hash_conflict_num = 0;
 	aet_ctrl->set_num = 0;
 	aet_ctrl->tracking_page_set_num = 0;
+	aet_ctrl->surplus_mc = 0;
+	aet_ctrl->surplus_count = 0;
+	aet_ctrl->surplus_mc2 = 0;
+	aet_ctrl->surplus_count2 = 0;
+	aet_ctrl->vmexit_num = 0;
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->node_count_, 0, sizeof(aet_ctrl->node_count_));
 	memset(aet_ctrl->tot_ref_, 0, sizeof(aet_ctrl->tot_ref_));
 	memset(aet_ctrl->lps, 0, sizeof(aet_ctrl->lps));
 	memset(aet_ctrl->tvs, 0, sizeof(aet_ctrl->tvs));
+	memset(aet_ctrl->tracking_page_set_, 0, sizeof(aet_ctrl->tracking_page_set_));
 }
 
 int main(int argc, char** argv) {

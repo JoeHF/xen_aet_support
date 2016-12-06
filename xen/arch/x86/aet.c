@@ -10,6 +10,7 @@
 #include <asm/apic.h>
 #include <xen/kernel.h>
 #include <public/sched.h>
+#include <public/xc_reserved_op.h>
 
 static struct AET_ctrl *aet_ctrl;
 static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
@@ -135,7 +136,6 @@ void get_last_shadow_l1e(unsigned long *sl1mfn, unsigned long *va) {
 }
 
 void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec, unsigned long mc) {
-	aet_ctrl->user_mode_fault++;
 	if (aet_ctrl->total_count + 10 < MAX_ARRAY_SIZE) {
 		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
 		aet_ctrl->tvs[aet_ctrl->total_count].type = USER_MODE;
@@ -179,7 +179,7 @@ static unsigned long domain_value_to_index(unsigned long value)
 static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned long new_mc) {
 	unsigned long compressed_dis;
 	if (old_mc > new_mc) {
-		printk("[WARNING] old mem counter is larger than the new mem counter\n");
+		printk("[WARNING] old mem counter is larger than the new mem counter old_mc:%lu new_mc:%lu\n", old_mc, new_mc);
 		return;
 	}
 
@@ -193,30 +193,51 @@ static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned l
 	aet_ctrl->aet_hist_[domain_id - 1][compressed_dis]++;
 }
 
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter) {
+unsigned long get_mem_counter(void) {
+	unsigned long mc;
+	unsigned long surplus_mc;
+	mc = pmu_mem_return(1, 0);
+	if (mc == 0)
+		return 0;
+
+	surplus_mc = aet_ctrl->surplus_mc;
+	if (aet_ctrl->surplus_count2 != 0)
+		surplus_mc += aet_ctrl->surplus_mc2 / aet_ctrl->surplus_count2 * aet_ctrl->vmexit_num;
+	if (mc <= surplus_mc) {
+		printk("[WARNING]%s mc sub surplus less than zero vmexit_num:%lu mc:%lu surplus_mc:%lu\n", __func__, aet_ctrl->vmexit_num, mc, surplus_mc);
+		return mc;
+	}
+
+	return mc - surplus_mc;
+
+}
+
+void track_aet_fault(int domain_id, unsigned long mfn) {
 	int key;
 	int hash_pos = 0;
-	unsigned long page_fault_diff;
-	unsigned long mc_diff;
+//	unsigned long page_fault_diff;
+    unsigned long mc = get_mem_counter();
+	unsigned long mc_diff = 0;
 	key = mfn % HASH;
 	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
 		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == mfn) {
-			page_fault_diff = aet_ctrl->page_fault_count - aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf; 
+			//page_fault_diff = aet_ctrl->page_fault_count - aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf; 
 			/* sub the additional mem ref by shadow page fault */
-			mc_diff = page_fault_diff * 20;
-			add_to_aet_histogram(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter - mc_diff);
+			//mc_diff = page_fault_diff * 20;
+			add_to_aet_histogram(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mc - mc_diff);
 
-			add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
+			add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mc - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mc - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
 
-			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mc;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->tot_ref_[domain_id - 1]++;
 			return;
 		}
 
 		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == 0) {
+			printk("[WARNING] There is tracked aet fault but not in hash table mfn:%lx\n", mfn);
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn = mfn;
-			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mc;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->node_count_[domain_id - 1]++;
 			return;
@@ -331,12 +352,17 @@ typedef l1_pgentry_t shadow_l1e_t;
 #define SH_L1E_AET_MAGIC 0x7ff8000000000400ULL
 static inline u32 shadow_l1e_get_flags(shadow_l1e_t sl1e)
 { return l1e_get_flags(sl1e); }
+static inline mfn_t shadow_l1e_get_mfn(shadow_l1e_t sl1e)
+{ return _mfn(l1e_get_pfn(sl1e)); }
 
+static void set_page_mc(int domain_id, unsigned long mfn);
 static void track_l1_page(unsigned long sl1mfn, unsigned long va, unsigned long *count, int set) {
 	shadow_l1e_t *sp, *sl1e;
 	int i;
 	unsigned long user_bit = 0x4;
+	unsigned long mc;
 	sp = map_domain_page(sl1mfn);
+	mc = get_mem_counter();
 	if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
 		|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
 		for (i = 0 ; i < CONSECUTIVE_SET_PAGE ; i++) {
@@ -345,13 +371,14 @@ static void track_l1_page(unsigned long sl1mfn, unsigned long va, unsigned long 
 				&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
 				&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
 				&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
-					add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 1, 0);
 					if (set) {
 						(*count)++;
 					//	printk("[joe]%s set aet magic va:%lx sl1mfn:%lx count:%lu\n", __func__, va, sl1mfn, *count);
+						add_set_aet_magic_count(va, sl1e->l1, sl1mfn, 1, mc);
+						set_page_mc(1, ((mfn_x(shadow_l1e_get_mfn(*sl1e))) & 0x7fffffffff));
 						sl1e->l1 |= SH_L1E_AET_MAGIC;
 						sl1e->l1 &= (~user_bit);
-						flush_tlb_one_local(va);
+						//flush_tlb_one_local(va);
 					}
 			}
 			
@@ -381,6 +408,7 @@ void set_pending_page() {
 	}	
 
 	aet_ctrl->set_num = 0;
+	flush_tlb_local();
 	//if (count != 0)
 	//	printk("[joe]%s set %lu page\n", __func__, count);
 }
@@ -401,9 +429,33 @@ void add_to_track_page_set(unsigned long sl1mfn, unsigned long va) {
 			return;
 	}
 
+	add_set_aet_magic_count(va_start, 0, sl1mfn, 4, 0);
 	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].sl1mfn = sl1mfn;
 	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].va = va_start;
 	aet_ctrl->tracking_page_set_num++;
+}
+
+static void set_page_mc(int domain_id, unsigned long mfn) {
+	int key;
+	int hash_pos = 0;
+	unsigned long mc;
+	mc = get_mem_counter();	
+	key = mfn % HASH;
+	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
+		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == mfn) {
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mc;
+			return;
+		}
+
+		else if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == 0) {
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mc;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn = mfn;
+			aet_ctrl->node_count_[domain_id - 1]++;
+			return;
+		}
+	}
+
+	aet_ctrl->hash_conflict_num++;
 	
 }
 
@@ -412,18 +464,37 @@ void set_all_track_page() {
 	unsigned long sl1mfn;
 	unsigned long va;
 	unsigned long count = 0;
+//	unsigned long mc;
+//	mc = pmu_mem_return(1, 0);
+//	add_set_aet_magic_count(0, 0, 0, 0, mc);
 	if (aet_ctrl->tracking_page_set_num == 0)
 		return;
 	for (i = 0 ; i < aet_ctrl->tracking_page_set_num ; i++) {
 		sl1mfn = aet_ctrl->tracking_page_set_[i].sl1mfn;
 		va = aet_ctrl->tracking_page_set_[i].va;
-		add_set_aet_magic_count(va, 0, sl1mfn, 3, 0);
 		track_l1_page(sl1mfn, va, &count, 1);
 	}	
 
 	// for debug
-	printk("[joe]%s set:%lu/%lu track page\n", __func__, count, aet_ctrl->tracking_page_set_num * CONSECUTIVE_SET_PAGE);
+	if (count != 0)
+		printk("[joe]%s set:%lu/%lu track page\n", __func__, count, aet_ctrl->tracking_page_set_num * CONSECUTIVE_SET_PAGE);
 //	aet_ctrl->tracking_page_set_num = 0;
+}
+
+void add_vmexit_num() {
+	aet_ctrl->vmexit_num++;
+}
+
+void add_surplus_mc(unsigned long emc, unsigned long omc) {
+	aet_ctrl->surplus_count += 1;
+	aet_ctrl->surplus_mc += (omc - emc);
+//	if (aet_ctrl->surplus_count != 0)
+//		printk("[joe]%s, diff:%lu avg:%lu\n", __func__, omc - emc, aet_ctrl->surplus_mc / aet_ctrl->surplus_count);
+}
+
+void add_surplus_mc2(unsigned long emc, unsigned long omc) {
+	aet_ctrl->surplus_count2 += 1;
+	aet_ctrl->surplus_mc2 += (omc - emc);
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)

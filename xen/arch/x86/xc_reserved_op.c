@@ -138,7 +138,7 @@ void init_evtsel(int cpu, u32 counter, u32 event, u32 umask, u32 tmask) {
 }
 
 
-static void start_pmu(int cpu, int arg2) {
+void start_pmu(int cpu, int arg2) {
 	u32 i;
 	volatile u64 val;
 
@@ -170,11 +170,20 @@ static void start_pmu(int cpu, int arg2) {
 	wrmsr_on_cpu(cpu, IA32_FIXED_CTR_CTRL, val);
 }
 
-static void stop_pmu(int cpu, int arg2) {
+void stop_pmu(int cpu, int arg2) {
 	u32 i;
 	u64 pmc_val[PMC_N], fixed_val[FIXED_N];
 	volatile u64 val, ovf;
+	int print_bit;
 
+	
+	printk("%s arg2:%d %u\n", __func__, arg2, PRINT_BIT_CLEAR);
+	print_bit = (arg2 & PRINT_BIT_CLEAR);
+	arg2 = (arg2 & (~PRINT_BIT_CLEAR));
+	printk("%s arg2:%d print_bit:%d\n", __func__, arg2, print_bit);
+	if (arg2 != 0) {
+		printk("%s arg2:%d\n", __func__, arg2);
+	}
 	ovf = rdmsr_on_cpu(cpu, IA32_PERF_GLOBAL_STATUS);
 	
 	for (i = 0; i < PMC_N; i++) {
@@ -182,22 +191,30 @@ static void stop_pmu(int cpu, int arg2) {
 		val -= base;
 		if (val + base < base) val += 0xffffffffffff;
 		pmc_val[i] = val;
-		printk("%s val : %lu, overflow : %d\n",
-			events[events_selector][i].name, val, (ovf & (1 << i)) > 0);
+		if (print_bit == 0)
+			printk("%s val : %lu, overflow : %d\n",
+				events[events_selector][i].name, val, (ovf & (1 << i)) > 0);
 	}
-	for (i = 0; i < PMC_N; i++)
-		printk("%lu ", pmc_val[i]);
-	printk("\n\n");
+	
+	if (print_bit == 0) {
+		for (i = 0; i < PMC_N; i++)
+			printk("%lu ", pmc_val[i]);
+		printk("\n\n");
+	}
 	
 	for (i = 0; i < FIXED_N; i++) {
 		val = rdmsr_on_cpu(cpu, IA32_FIXED_CTR + i);
 		fixed_val[i] = val;
-		printk("%s val : %lu, overflow : %lX\n",
-			fixed_name[i], val, (ovf & ((1UL) << (i + 32))));
+		if (print_bit == 0)
+			printk("%s val : %lu, overflow : %lX\n",
+				fixed_name[i], val, (ovf & ((1UL) << (i + 32))));
 	}
-	for (i = 0; i < FIXED_N; i++)
-		printk("%lu ", fixed_val[i]);
-	printk("\n\n");
+
+	if (print_bit == 0) {
+		for (i = 0; i < FIXED_N; i++)
+			printk("%lu ", fixed_val[i]);
+		printk("\n\n");
+	}
 
 	if (arg2) {
 		for (i = 0 ; i < PMC_N; i++) {
