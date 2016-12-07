@@ -10,6 +10,7 @@
 #include <asm/apic.h>
 #include <xen/kernel.h>
 #include <public/sched.h>
+#include <public/xc_reserved_op.h>
 
 static struct AET_ctrl *aet_ctrl;
 static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
@@ -206,7 +207,8 @@ void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter
 			mc_diff = page_fault_diff * 20;
 			add_to_aet_histogram(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter - mc_diff);
 
-			add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
+			if (mem_counter > aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter)
+				add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
 
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
@@ -339,11 +341,13 @@ void set_pending_page() {
 	unsigned long va;
 	unsigned long count = 0;
 	unsigned long user_bit = 0x4;
+	unsigned long mc = 0;
 	if (aet_ctrl->set_num == 0)
 		return;
 	//else
 	//	printk("[joe]%s set_num:%lu\n", __func__, aet_ctrl->set_num);
 
+	mc = pmu_mem_return(1, 0);
 	for (j = 0 ; j < aet_ctrl->set_num ; j++) {
 		shadow_l1e_t *sp;
 		sl1mfn = aet_ctrl->pds[j].sl1mfn;
@@ -358,7 +362,7 @@ void set_pending_page() {
 					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
 					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
 					&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
-						add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 1, 0);
+						add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 1, mc);
 						count++;
 						sl1e->l1 |= SH_L1E_AET_MAGIC;
 						sl1e->l1 &= (~user_bit);
