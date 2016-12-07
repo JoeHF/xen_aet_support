@@ -361,8 +361,10 @@ static void track_l1_page(unsigned long sl1mfn, unsigned long va, unsigned long 
 	int i;
 	unsigned long user_bit = 0x4;
 	unsigned long mc;
+	unsigned long mc2;
 	sp = map_domain_page(sl1mfn);
 	mc = get_mem_counter();
+	mc2 = pmu_mem_return(1, 0);
 	if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
 		|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
 		for (i = 0 ; i < CONSECUTIVE_SET_PAGE ; i++) {
@@ -374,7 +376,7 @@ static void track_l1_page(unsigned long sl1mfn, unsigned long va, unsigned long 
 					if (set) {
 						(*count)++;
 					//	printk("[joe]%s set aet magic va:%lx sl1mfn:%lx count:%lu\n", __func__, va, sl1mfn, *count);
-						add_set_aet_magic_count(va, sl1e->l1, sl1mfn, 1, mc);
+						add_set_aet_magic_count(va, sl1e->l1, sl1mfn, 1, mc2);
 						set_page_mc(1, ((mfn_x(shadow_l1e_get_mfn(*sl1e))) & 0x7fffffffff));
 						sl1e->l1 |= SH_L1E_AET_MAGIC;
 						sl1e->l1 &= (~user_bit);
@@ -403,7 +405,7 @@ void set_pending_page() {
 	for (j = 0 ; j < aet_ctrl->set_num ; j++) {
 		sl1mfn = aet_ctrl->pds[j].sl1mfn;
 		va = aet_ctrl->pds[j].va;
-		add_set_aet_magic_count(va, 0, sl1mfn, 2, 0);
+		add_set_aet_magic_count(va, 0, sl1mfn, 2, aet_ctrl->vmexit_num);
 		track_l1_page(sl1mfn, va, &count, 0);
 	}	
 
@@ -419,6 +421,9 @@ void set_pending_page() {
 void add_to_track_page_set(unsigned long sl1mfn, unsigned long va) {
 	int i;
 	unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
+	unsigned long mc;	
+	mc = pmu_mem_return(1, 0);
+	mc = get_mem_counter();
 	if (aet_ctrl->tracking_page_set_num >= MAX_TRACKING_PAGE) {
 		printk("[WARNING]%s tracking page set num exceeds the max tracking page num:%d\n", __func__, MAX_TRACKING_PAGE);
 		return;
@@ -429,7 +434,7 @@ void add_to_track_page_set(unsigned long sl1mfn, unsigned long va) {
 			return;
 	}
 
-	add_set_aet_magic_count(va_start, 0, sl1mfn, 4, 0);
+	add_set_aet_magic_count(va_start, 0, sl1mfn, aet_ctrl->vmexit_num, mc);
 	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].sl1mfn = sl1mfn;
 	aet_ctrl->tracking_page_set_[aet_ctrl->tracking_page_set_num].va = va_start;
 	aet_ctrl->tracking_page_set_num++;
