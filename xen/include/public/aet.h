@@ -4,6 +4,7 @@
 #define SHARED_DATA_START (PML4_ADDR(270))
 
 #define CONSECUTIVE_SET_PAGE 2 
+#define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE)
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
 #define MAX_ARRAY_SIZE 40000
@@ -75,6 +76,7 @@ struct last_pte {
 struct hash_node {
 	unsigned long mfn;
 	unsigned long mem_counter;
+	unsigned long l3_counter;
 	unsigned long pf;
 };
 
@@ -138,7 +140,7 @@ void set_aet_start(unsigned long sl4mfn);
 int get_aet_start(unsigned long *sl4mfn);
 
 /* The following function is used for aet calculation */
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter);
+void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3);
 
 /* The following funcion is used for debug register*/
 void set_debug_reg(unsigned long va, int cpu_id, void *v);

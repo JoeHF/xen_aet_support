@@ -194,7 +194,40 @@ static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned l
 	aet_ctrl->aet_hist_[domain_id - 1][compressed_dis]++;
 }
 
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter) {
+static void add_to_aet_first_hist(int domain_id, 
+		unsigned long old_l3, unsigned long new_l3,
+		unsigned long old_mem, unsigned long new_mem) {
+	unsigned long l3_diff;
+	unsigned long mem_diff;
+	unsigned long surplus;
+	unsigned long total_page;
+	if (old_l3 > new_l3) {
+		printk("[WARNING] old l3 counter is larger than the new l3 counter");
+		return;
+	}
+	
+	if (old_mem > new_mem) {
+		printk("[WARNING] old mem counter is larger than the new mem counter");
+		return;
+	}
+
+	l3_diff = new_l3 - old_l3;
+	mem_diff = new_mem - old_mem;
+	if (l3_diff >= mem_diff) {
+		printk("[WARNING] mem_diff less than l3_diff l3diff:%lu memdiff:%lu", l3_diff, mem_diff);
+		return;
+	}
+
+
+    surplus = (mem_diff - l3_diff);
+	total_page = aet_ctrl->node_count_[domain_id - 1] * TRACK_RATE;
+	surplus = surplus / total_page;
+
+	add_user_mode_fault_count(0, surplus, 0, l3_diff, mem_diff); // for debug	
+	aet_ctrl->aet_hist_[domain_id - 1][1] += surplus;
+}
+
+void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3) {
 	int key;
 	int hash_pos = 0;
 	unsigned long page_fault_diff;
@@ -210,7 +243,9 @@ void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter
 			if (mem_counter > aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter)
 				add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
 
+			add_to_aet_first_hist(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter, l3, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter);
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter = l3;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->tot_ref_[domain_id - 1]++;
 			return;
@@ -219,6 +254,7 @@ void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter
 		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == 0) {
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn = mfn;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter = l3;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->node_count_[domain_id - 1]++;
 			return;
@@ -342,12 +378,13 @@ void set_pending_page() {
 	unsigned long count = 0;
 	unsigned long user_bit = 0x4;
 	unsigned long mc = 0;
+	unsigned long mem, l3;
 	if (aet_ctrl->set_num == 0)
 		return;
 	//else
 	//	printk("[joe]%s set_num:%lu\n", __func__, aet_ctrl->set_num);
 
-	mc = pmu_mem_return(1, 0);
+	mc = pmu_mem_return(1, 0, &mem, &l3);
 	for (j = 0 ; j < aet_ctrl->set_num ; j++) {
 		shadow_l1e_t *sp;
 		sl1mfn = aet_ctrl->pds[j].sl1mfn;

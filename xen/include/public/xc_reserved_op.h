@@ -32,6 +32,6 @@
 
 unsigned long stop_pmu_return(int cpu, int arg2);
 unsigned long pmu_l3_return(int cpu, int arg2);
-unsigned long pmu_mem_return(int cpu, int arg2);
+unsigned long pmu_mem_return(int cpu, int arg2, unsigned long *mem, unsigned long *l3);
 
 #endif

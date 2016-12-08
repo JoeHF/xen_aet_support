@@ -15,10 +15,10 @@ struct event events[][PMC_N] =
 {
 	//{"DTLB_LOAD_MISS_COMPLETE", 0x8, 0xe, 0},
 	//{"DTLB_LOAD_MISS_DURATION", 0x8, 0x10, 0},
-	{"DTLB_LOAD_MISS_COMPLETE", 0x8, 0x2, 0},
+	//{"DTLB_LOAD_MISS_COMPLETE", 0x8, 0x2, 0},
 //	{"DTLB_LOAD_MISS_DURATION", 0x8, 0x4, 0},
 //	{"L1_HIT", 0xd1, 0x1, 0},
-//	{"L3.MISSES", 0x2e, 0x41, 0},
+	{"L3.MISSES", 0x2e, 0x41, 0},
 	{"MEM_UOP_RETIRED_ALL1", 0xd0, 0x81, 0},
 	{"DTLB_STORE_MISS_COMPLETE", 0x49, 0x2, 0},
 //	{"DTLB_STORE_MISS_DURATION", 0x49, 0x4, 0},
@@ -279,7 +279,7 @@ u64 pmu_l3_return(int cpu, int arg2) {
 	return (pmc_val[1]);
 }
 
-u64 pmu_mem_return(int cpu, int arg2) {
+u64 pmu_mem_return(int cpu, int arg2, u64 *mem, u64 *l3) {
 	u32 i;
 	u64 pmc_val[PMC_N];
 	volatile u64 val, ovf;
@@ -308,6 +308,9 @@ u64 pmu_mem_return(int cpu, int arg2) {
 		for (i = 0; i < FIXED_N; i++)
 			wrmsr_on_cpu(cpu, IA32_FIXED_CTR + i, 0);
 	}
+
+	*mem = (pmc_val[1] + pmc_val[3]);
+	*l3 = (pmc_val[0]);
 	return (pmc_val[1] + pmc_val[3]);
 }
 

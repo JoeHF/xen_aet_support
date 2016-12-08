@@ -18,16 +18,20 @@ from email.header import Header
 def read_aet_file(xaxis, yaxis):
 	fo = open("aet_hist.txt")
 	tot = 0
+	y_tot = 0
 	for line in fo.readlines():
 		strs = line.split()
 		x = strs[0].split(':')[1]
 		if int(x) > 10000:
 			break
 		y = strs[1].split(':')[1]
+		y_tot += int(y)
 		tot += int(y)
-		xaxis.append(x)
-		yaxis.append(y)
-	print tot
+		if int(x) % 20 == 0:
+			xaxis.append(int(x))
+			yaxis.append(y_tot)
+			y_tot = 0
+	print "total aet hist count:{0}".format(tot)
 	fo.close()
 
 def read_miss_curve_file(xaxis, yaxis):
