@@ -93,7 +93,7 @@ void print(int arg) {
 	printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
 	printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 	printf("total count:%d\n", aet_ctrl->total_count);
-	printf("hash conflict:%llu\n", aet_ctrl->hash_conflict_num);
+	printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
 	
 	if (arg == 1) {
 		FILE *fp;
@@ -101,7 +101,7 @@ void print(int arg) {
 
 		int i;
 		for (i = 0 ; i < aet_ctrl->total_count ; i++) {
-			fprintf(fp, "va:%lx type:%s l1:%lx %lx ec:%lu mem_counter:%lu\n", aet_ctrl->tvs[i].va, NAME[aet_ctrl->tvs[i].type], aet_ctrl->tvs[i].l1p, aet_ctrl->tvs[i].l1, aet_ctrl->tvs[i].ec, aet_ctrl->tvs[i].mc);	
+			fprintf(fp, "va:%lx type:%s vmexit num:%lu %lx ec:%lu mem_counter:%lu\n", aet_ctrl->tvs[i].va, NAME[aet_ctrl->tvs[i].type], aet_ctrl->tvs[i].l1p, aet_ctrl->tvs[i].l1, aet_ctrl->tvs[i].ec, aet_ctrl->tvs[i].mc);	
 		}
 
 		fclose(fp);

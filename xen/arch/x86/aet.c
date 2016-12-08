@@ -73,7 +73,7 @@ void add_set_aet_magic_count(unsigned long va, unsigned long l1, unsigned long l
 		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
 		aet_ctrl->tvs[aet_ctrl->total_count].type = SET;
 		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
-		aet_ctrl->tvs[aet_ctrl->total_count].l1p = l1p;
+		aet_ctrl->tvs[aet_ctrl->total_count].l1p = aet_ctrl->vmexit_num;
 		aet_ctrl->tvs[aet_ctrl->total_count].ec = ec;
 		aet_ctrl->tvs[aet_ctrl->total_count].mc = mc;
 		aet_ctrl->total_count++;
@@ -141,7 +141,7 @@ void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long
 		aet_ctrl->tvs[aet_ctrl->total_count].va = va;
 		aet_ctrl->tvs[aet_ctrl->total_count].type = USER_MODE;
 		aet_ctrl->tvs[aet_ctrl->total_count].l1 = l1;
-		aet_ctrl->tvs[aet_ctrl->total_count].l1p = l1p;
+		aet_ctrl->tvs[aet_ctrl->total_count].l1p = aet_ctrl->vmexit_num;
 		aet_ctrl->tvs[aet_ctrl->total_count].ec = ec;
 		aet_ctrl->tvs[aet_ctrl->total_count].mc = mc;
 		
@@ -382,6 +382,10 @@ void set_pending_page() {
 	aet_ctrl->set_num = 0;
 	//if (count != 0)
 	//	printk("[joe]%s set %lu page\n", __func__, count);
+}
+
+void add_vmexit_num(void) {
+	aet_ctrl->vmexit_num++;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)

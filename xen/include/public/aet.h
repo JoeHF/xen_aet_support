@@ -109,6 +109,8 @@ struct AET_ctrl {
 	/* add to pending set */
 	unsigned long set_num;
 	struct pending_node pds[MAX_PENDING_PAGE];
+	/* The following variable is used by iss16*/
+	unsigned long vmexit_num;
 };
 
 void aet_init(void);
@@ -147,4 +149,6 @@ void track_debug_reg(unsigned long va);
 void add_to_pending_page(unsigned long sl1mfn, unsigned long va);
 void set_pending_page(void);
 
+/* The following function is used by iss16*/
+void add_vmexit_num(void);
 #endif
