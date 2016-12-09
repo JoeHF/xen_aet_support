@@ -225,6 +225,7 @@ static void add_to_aet_first_hist(int domain_id,
 
 	add_user_mode_fault_count(0, surplus, 0, l3_diff, mem_diff); // for debug	
 	aet_ctrl->aet_hist_[domain_id - 1][1] += surplus;
+	aet_ctrl->tot_ref_[domain_id - 1] += surplus;
 }
 
 void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3) {
