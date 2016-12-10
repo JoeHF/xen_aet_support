@@ -3509,12 +3509,12 @@ static int sh_page_fault(struct vcpu *v,
 
 	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
 		unsigned long mfn;
-		unsigned long mem, l3;
-		mem_counter = pmu_mem_return(1, 0, &mem, &l3);
+		unsigned long mem, l3, dtlb_miss;
+		mem_counter = pmu_mem_return(1, 0, &mem, &l3, &dtlb_miss);
 		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
 		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
 		if (mfn != 0)
-			track_aet_fault(v->domain->domain_id, mfn, mem_counter, l3);
+			track_aet_fault(v->domain->domain_id, mfn, mem_counter, l3, dtlb_miss);
 		add_tracked_aet_magic_count1();
 	}
 	

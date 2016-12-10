@@ -10,6 +10,7 @@
 #define MAX_ARRAY_SIZE 40000
 #define MAX_PENDING_PAGE 1000
 
+#define DTLB_ENTRY 64
 #define HOT_SET_SIZE 10
 
 #define HASH 49997
@@ -77,6 +78,7 @@ struct hash_node {
 	unsigned long mfn;
 	unsigned long mem_counter;
 	unsigned long l3_counter;
+	unsigned long dtlb_miss;
 	unsigned long pf;
 };
 
@@ -140,7 +142,7 @@ void set_aet_start(unsigned long sl4mfn);
 int get_aet_start(unsigned long *sl4mfn);
 
 /* The following function is used for aet calculation */
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3);
+void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3, unsigned long dtlb_miss);
 
 /* The following funcion is used for debug register*/
 void set_debug_reg(unsigned long va, int cpu_id, void *v);

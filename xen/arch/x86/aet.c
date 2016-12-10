@@ -194,6 +194,45 @@ static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned l
 	aet_ctrl->aet_hist_[domain_id - 1][compressed_dis]++;
 }
 
+static void add_to_aet_first_hist2(int domain_id,
+								   unsigned long old_dtlb,
+								   unsigned long new_dtlb,
+								   unsigned long old_mem,
+								   unsigned long new_mem) { 
+	unsigned long dtlb_miss_diff;
+	unsigned long mem_diff;
+	unsigned long surplus;
+	add_user_mode_fault_count(3, 0, 0, old_dtlb, new_dtlb); // for debug
+	add_user_mode_fault_count(4, 0, 0, old_mem, new_mem); // for debug
+	if (old_dtlb >= new_dtlb) { 
+		//printk("[WARNING] old dtlb counter is larger than the new dtlb counter");
+		return;
+	}	
+
+	if (old_mem > new_mem) {
+		//printk("[WARNING] old mem counter is larger than the new mem counter");
+		return;
+	}
+
+	dtlb_miss_diff = new_dtlb - old_dtlb;
+	dtlb_miss_diff -= aet_ctrl->node_count_[domain_id - 1];
+	dtlb_miss_diff *= DTLB_ENTRY;
+	mem_diff = new_mem - old_mem;
+	add_user_mode_fault_count(6, 0, 0, mem_diff, dtlb_miss_diff);
+	if (mem_diff <= dtlb_miss_diff) { 
+		//printk("[WARNING] mem_diff is less than dtlb_miss_diff\n");
+		return;
+	}
+
+	surplus = mem_diff - dtlb_miss_diff;
+	surplus /= (aet_ctrl->node_count_[domain_id - 1] * TRACK_RATE); 
+	
+	add_user_mode_fault_count(surplus, 0, 0, mem_diff, dtlb_miss_diff); // for debug
+	aet_ctrl->aet_hist_[domain_id - 1][1] += surplus;
+	aet_ctrl->tot_ref_[domain_id - 1] += surplus;
+}
+
+/*
 static void add_to_aet_first_hist(int domain_id, 
 		unsigned long old_l3, unsigned long new_l3,
 		unsigned long old_mem, unsigned long new_mem) {
@@ -227,15 +266,25 @@ static void add_to_aet_first_hist(int domain_id,
 	aet_ctrl->aet_hist_[domain_id - 1][1] += surplus;
 	aet_ctrl->tot_ref_[domain_id - 1] += surplus;
 }
+*/
 
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3) {
+void track_aet_fault(int domain_id, 
+					 unsigned long mfn, 
+					 unsigned long mem_counter, 
+					 unsigned long l3,
+					 unsigned long dtlb_miss) {
 	int key;
 	int hash_pos = 0;
 	unsigned long page_fault_diff;
 	unsigned long mc_diff;
+	unsigned long real_dtlb_miss_diff;
+	struct hash_node *hn;
 	key = mfn % HASH;
 	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-		if (aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn == mfn) {
+		hn = aet_ctrl->hns_[domain_id - 1][key] + hash_pos;
+		if (hn->mfn != aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn)
+			printk("[WARNING]not the same mfn\n");
+		if (hn->mfn == mfn) {
 			page_fault_diff = aet_ctrl->page_fault_count - aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf; 
 			/* sub the additional mem ref by shadow page fault */
 			mc_diff = page_fault_diff * 20;
@@ -244,9 +293,15 @@ void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter
 			if (mem_counter > aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter)
 				add_user_mode_fault_count(mfn, 0, mc_diff, domain_value_to_index(mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter), mem_counter - aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter - mc_diff); // for debug	
 
-			add_to_aet_first_hist(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter, l3, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter);
+			real_dtlb_miss_diff = dtlb_miss - hn->dtlb_miss - aet_ctrl->node_count_[domain_id - 1];
+			real_dtlb_miss_diff = real_dtlb_miss_diff * DTLB_ENTRY;
+			//add_to_aet_first_hist(domain_id, aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter, l3, aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter, mem_counter);
+			add_to_aet_first_hist2(domain_id, hn->dtlb_miss, dtlb_miss, hn->mem_counter, mem_counter);
+
+			add_user_mode_fault_count(1, 0, mc_diff, real_dtlb_miss_diff, dtlb_miss); // for debug	
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter = l3;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].dtlb_miss = dtlb_miss;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->tot_ref_[domain_id - 1]++;
 			return;
@@ -256,6 +311,7 @@ void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mfn = mfn;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].mem_counter = mem_counter;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].l3_counter = l3;
+			aet_ctrl->hns_[domain_id - 1][key][hash_pos].dtlb_miss = dtlb_miss;
 			aet_ctrl->hns_[domain_id - 1][key][hash_pos].pf = aet_ctrl->page_fault_count;
 			aet_ctrl->node_count_[domain_id - 1]++;
 			return;
@@ -379,13 +435,13 @@ void set_pending_page() {
 	unsigned long count = 0;
 	unsigned long user_bit = 0x4;
 	unsigned long mc = 0;
-	unsigned long mem, l3;
+	unsigned long mem, l3, dtlb_miss;
 	if (aet_ctrl->set_num == 0)
 		return;
 	//else
 	//	printk("[joe]%s set_num:%lu\n", __func__, aet_ctrl->set_num);
 
-	mc = pmu_mem_return(1, 0, &mem, &l3);
+	mc = pmu_mem_return(1, 0, &mem, &l3, &dtlb_miss);
 	for (j = 0 ; j < aet_ctrl->set_num ; j++) {
 		shadow_l1e_t *sp;
 		sl1mfn = aet_ctrl->pds[j].sl1mfn;

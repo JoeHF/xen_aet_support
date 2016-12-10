@@ -37,7 +37,8 @@ mem1=`xl dm | tail -n 16 | grep "MEM_UOP_RETIRED_ALL1" | awk -F ':' '{print $2}'
 mem2=`xl dm | tail -n 16 | grep "MEM_UOP_RETIRED_ALL2" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
 mem=$(($mem1+$mem2))
 dtlb1=`xl dm | tail -n 16 | grep "DTLB_LOAD_MISS_COMPLETE" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
-dtlb2=`xl dm | tail -n 16 | grep "DTLB_STORE_MISS_COMPLETE" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
+dtlb2=0
+#dtlb2=`xl dm | tail -n 16 | grep "DTLB_STORE_MISS_COMPLETE" | awk -F ':' '{print $2}' | awk -F ',' '{print $1}'`
 dtlb=$(($dtlb1+$dtlb2))
 echo "mem1:$mem1 mem2:$mem2 mem:$mem"
 echo "dtlb1:$dtlb1 dtlb2:$dtlb2 dtlb:$dtlb"
