@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 
 static struct AET_ctrl *aet_ctrl = (struct AET_ctrl *)PML4_ADDR(270ul);
-static char* NAME[3] = {"SET", "REVERSED", "USER_MODE"};
+static char* NAME[10] = {"SET", "REVERSED", "USER_MODE", "TLB_COUNTER", "MEM_COUNTER", "DIFF"};
 
 //#ifdef AET_PF
 static void aet_process(int dom, unsigned long n) {
@@ -92,7 +92,7 @@ void print(int arg) {
 			aet_ctrl->reversed_aet_magic_count, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count1, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count2, aet_ctrl->set_aet_magic_count);
 	printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
 	printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
-	printf("total count:%d\n", aet_ctrl->total_count);
+	printf("total count:%d set_pending_page_num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num);
 	printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
 	
 	if (arg == 1) {
@@ -140,6 +140,7 @@ void reset() {
 	aet_ctrl->reserved_bit_fault = 0;
 	aet_ctrl->both_fault = 0;
 	aet_ctrl->hash_conflict_num = 0;
+	aet_ctrl->set_pending_page_num = 0;
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->node_count_, 0, sizeof(aet_ctrl->node_count_));

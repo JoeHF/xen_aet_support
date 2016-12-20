@@ -3101,7 +3101,6 @@ static int sh_page_fault(struct vcpu *v,
 #endif
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
-	unsigned long mem_counter;
 #endif
 #endif
 
@@ -3507,14 +3506,17 @@ static int sh_page_fault(struct vcpu *v,
 		add_reserved_bit_fault_count();
 	}
 
-	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {
+	
+	if (sh_l1e_is_aet_magic(*ptr_sl1e) && is_l1_track()) {
 		unsigned long mfn;
-		unsigned long mem, l3, dtlb_miss;
-		mem_counter = pmu_mem_return(1, 0, &mem, &l3, &dtlb_miss);
-		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
+		unsigned long mem, dtlb_load_miss, dtlb_store_miss;
+
+		unsigned long mem_counter;
+		mem_counter = pmu_mem_return(1, 0, &mem, &dtlb_load_miss, &dtlb_store_miss);
+	//	add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
 		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
 		if (mfn != 0)
-			track_aet_fault(v->domain->domain_id, mfn, mem_counter, l3, dtlb_miss);
+			track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss);
 		add_tracked_aet_magic_count1();
 	}
 	

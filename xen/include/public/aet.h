@@ -57,7 +57,7 @@ struct page_reuse_time {
 };
 
 enum TYPE {
-	SET=0, REVERSED, USER_MODE
+	SET=0, REVERSED, USER_MODE, TLB_COUNTER, MEM_COUNTER, DIFF
 };
 
 struct tracked_va {
@@ -77,8 +77,9 @@ struct last_pte {
 struct hash_node {
 	unsigned long mfn;
 	unsigned long mem_counter;
-	unsigned long l3_counter;
 	unsigned long dtlb_miss;
+	unsigned long dtlb_load_miss;
+	unsigned long dtlb_store_miss;
 	unsigned long pf;
 };
 
@@ -113,6 +114,7 @@ struct AET_ctrl {
 	/* add to pending set */
 	unsigned long set_num;
 	struct pending_node pds[MAX_PENDING_PAGE];
+	unsigned long set_pending_page_num;
 	/* The following variable is used by iss16*/
 	unsigned long vmexit_num;
 };
@@ -135,6 +137,12 @@ void get_last_shadow_l1e(unsigned long *sl1mfn, unsigned long *va);
 void add_user_mode_fault_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec, unsigned long mc);
 void add_reserved_bit_fault_count(void);
 void add_both_fault_count(void);
+
+/* add counter */
+void add_tlb_counter(unsigned long old_value, unsigned long new_value);
+void add_mem_counter(unsigned long old_value, unsigned long new_value);
+void add_diff(unsigned long tlb_diff, unsigned long mem_diff);
+
 
 /* The following function is used to debug */
 int get_track(void);
