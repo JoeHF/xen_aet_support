@@ -1742,8 +1742,8 @@ static inline int sh_l4e_is_aet_magic(shadow_l4e_t sl4e) {
 static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned long va) {
 //	unsigned long user_bit = 0x4;
 	
-	shadow_l1e_t *sl1p;
-	int count = 1, done = 0;
+	//shadow_l1e_t *sl1p;
+	//int count = 1, done = 0;
 	unsigned long va_start;
 	unsigned long va_offset;
 
@@ -1784,8 +1784,8 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 	va_start = va - (va & L1_MASK & PAGE_MASK);
 	va_offset = ((va & L1_MASK & PAGE_MASK) >> 12);
 
-	if (va_offset >= CONSECUTIVE_SET_PAGE)
-		return;
+	//if (va_offset >= CONSECUTIVE_SET_PAGE)
+	//	return;
 
 	//set_debug_reg(va, 1, current);
 	sp = mfn_to_page(sl1mfn);
@@ -1797,27 +1797,28 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 	}
 	
 	add_to_pending_page(sl1mfn, va);
+	//add_to_all_sl1mfn(sl1mfn, va);
 	//printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
-	SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, done, {
-		done = l1_set_over(count);
-		if ((shadow_l1e_get_flags(*sl1p) & _PAGE_USER)
-		   	&& (shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT)
-		   	&& (shadow_l1e_get_flags(*sl1p) & _PAGE_RW)
-		   	&& (sl1p->l1 & SH_L1E_AET_MAGIC) == 0) {
+	//SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, done, {
+	//	done = l1_set_over(count);
+	//	if ((shadow_l1e_get_flags(*sl1p) & _PAGE_USER)
+	//	   	&& (shadow_l1e_get_flags(*sl1p) & _PAGE_PRESENT)
+	//	   	&& (shadow_l1e_get_flags(*sl1p) & _PAGE_RW)
+	//	   	&& (sl1p->l1 & SH_L1E_AET_MAGIC) == 0) {
 //			if (sl1p->l1 != ptr_sl1e->l1) {
 //				if (count != va_offset) {
-					add_set_aet_magic_count(va_start, sl1p->l1, (unsigned long)sl1p, 0, 0);
+	//				add_set_aet_magic_count(va_start, sl1p->l1, (unsigned long)sl1p, 0, 0);
 					//sl1p->l1 |= SH_L1E_AET_MAGIC;
 					//sl1p->l1 &= (~user_bit);
 					//flush_tlb_one_local(va_start);
 //					printk("[joe] set aet magic va:%lx sl1p:%p %lx\n", va_start, sl1p, sl1p->l1);
 //				}
 //			}
-		}
+	//	}
 		
-		count++;
-		va_start += (1 << 12);
-	});
+	//	count++;
+	//	va_start += (1 << 12);
+	//});
 	
 }
 
@@ -3101,6 +3102,7 @@ static int sh_page_fault(struct vcpu *v,
 #endif
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
+	int track_aet_fault_result = 0;
 #endif
 #endif
 
@@ -3516,16 +3518,27 @@ static int sh_page_fault(struct vcpu *v,
 	//	add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
 		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
 		if (mfn != 0)
-			track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss);
+			track_aet_fault_result = track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss);
 		add_tracked_aet_magic_count1();
 	}
 	
+	//printk("%s\n", __func__);
 	if (regs->error_code & PFEC_user_mode) {
 		if (guest_l2e_get_flags(gw.l2e) & _PAGE_PSE) {
 			printk("[joe] find big page\n");
 		}
+		
+		if (is_l1_track() && !(guest_l2e_get_flags(gw.l2e) & _PAGE_PSE)) { 
+			unsigned long va_start;
+			unsigned long va_offset;
+			va_start = va - (va & L1_MASK & PAGE_MASK);
+			va_offset = ((va & L1_MASK & PAGE_MASK) >> 12);
 
-		if (is_l1_track() && !(guest_l2e_get_flags(gw.l2e) & _PAGE_PSE)) {
+			//if (va_offset < CONSECUTIVE_SET_PAGE)
+				add_to_all_sl1mfn(sl1mfn, va);
+		}
+
+		if (is_l1_track() && !(guest_l2e_get_flags(gw.l2e) & _PAGE_PSE) && track_aet_fault_result) {
 			set_aet_magic(sl1mfn, ptr_sl1e, va);
 		}
 	}

@@ -3,12 +3,12 @@
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
-#define CONSECUTIVE_SET_PAGE 2 
+#define CONSECUTIVE_SET_PAGE 1 
 #define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE)
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
 #define MAX_ARRAY_SIZE 40000
-#define MAX_PENDING_PAGE 1000
+#define MAX_PENDING_PAGE 4000
 
 #define DTLB_ENTRY 64
 #define HOT_SET_SIZE 10
@@ -81,6 +81,7 @@ struct hash_node {
 	unsigned long dtlb_load_miss;
 	unsigned long dtlb_store_miss;
 	unsigned long pf;
+	int track_time;
 };
 
 struct pending_node {
@@ -114,6 +115,9 @@ struct AET_ctrl {
 	/* add to pending set */
 	unsigned long set_num;
 	struct pending_node pds[MAX_PENDING_PAGE];
+	int sl1mfn_num;
+	struct pending_node all_sl1mfn[MAX_PENDING_PAGE];
+	unsigned long set_sl1mfn_page_num;
 	unsigned long set_pending_page_num;
 	/* The following variable is used by iss16*/
 	unsigned long vmexit_num;
@@ -139,9 +143,9 @@ void add_reserved_bit_fault_count(void);
 void add_both_fault_count(void);
 
 /* add counter */
-void add_tlb_counter(unsigned long old_value, unsigned long new_value);
-void add_mem_counter(unsigned long old_value, unsigned long new_value);
-void add_diff(unsigned long tlb_diff, unsigned long mem_diff);
+void add_tlb_counter(int track_time, unsigned long old_value, unsigned long new_value);
+void add_mem_counter(int track_time, unsigned long old_value, unsigned long new_value);
+void add_diff(int track_time, unsigned long tlb_diff, unsigned long mem_diff);
 
 
 /* The following function is used to debug */
@@ -150,7 +154,7 @@ void set_aet_start(unsigned long sl4mfn);
 int get_aet_start(unsigned long *sl4mfn);
 
 /* The following function is used for aet calculation */
-void track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3, unsigned long dtlb_miss);
+int track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3, unsigned long dtlb_miss);
 
 /* The following funcion is used for debug register*/
 void set_debug_reg(unsigned long va, int cpu_id, void *v);
@@ -159,7 +163,9 @@ void track_debug_reg(unsigned long va);
 
 /* The following function is used to add to pending set */
 void add_to_pending_page(unsigned long sl1mfn, unsigned long va);
+void add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va);
 void set_pending_page(void);
+void rand_track_page(void);
 
 /* The following function is used by iss16*/
 void add_vmexit_num(void);

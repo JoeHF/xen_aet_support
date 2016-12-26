@@ -36,7 +36,7 @@ def read_aet_file(xaxis, yaxis, benchmark):
 	fo.close()
 
 def read_miss_curve_file(xaxis, yaxis, benchmark):
-	fo = open("pin_data/" + benchmark + "/tcount1.txt")
+	fo = open("pin_data/" + benchmark + "/tcount100.txt")
 	odd = 0
 	tot = 0
 	for line in fo.readlines():

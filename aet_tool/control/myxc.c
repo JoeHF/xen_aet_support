@@ -87,13 +87,15 @@ static void aet_process(int dom, unsigned long n) {
 }
 //#endif
 void print(int arg) {
-	printf("start:%d mfn:%lx track:%d open:%d\n", aet_ctrl->start_, aet_ctrl->sl4mfn_, aet_ctrl->track_, aet_ctrl->open_);
-	printf("reversed_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu\n", 
-			aet_ctrl->reversed_aet_magic_count, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count1, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count2, aet_ctrl->set_aet_magic_count);
-	printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
-	printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
-	printf("total count:%d set_pending_page_num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num);
-	printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
+	if (arg != 2) { 
+		printf("start:%d mfn:%lx track:%d open:%d\n", aet_ctrl->start_, aet_ctrl->sl4mfn_, aet_ctrl->track_, aet_ctrl->open_);
+		printf("reversed_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu\n", 
+				aet_ctrl->reversed_aet_magic_count, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count1, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count2, aet_ctrl->set_aet_magic_count);
+		printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
+		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
+		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
+		printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
+	}
 	
 	if (arg == 1) {
 		FILE *fp;
@@ -141,12 +143,16 @@ void reset() {
 	aet_ctrl->both_fault = 0;
 	aet_ctrl->hash_conflict_num = 0;
 	aet_ctrl->set_pending_page_num = 0;
+	aet_ctrl->sl1mfn_num = 0;
+	aet_ctrl->set_num = 0;
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->node_count_, 0, sizeof(aet_ctrl->node_count_));
 	memset(aet_ctrl->tot_ref_, 0, sizeof(aet_ctrl->tot_ref_));
 	memset(aet_ctrl->lps, 0, sizeof(aet_ctrl->lps));
 	memset(aet_ctrl->tvs, 0, sizeof(aet_ctrl->tvs));
+	memset(aet_ctrl->pds, 0, sizeof(aet_ctrl->pds));
+	memset(aet_ctrl->all_sl1mfn, 0, sizeof(aet_ctrl->all_sl1mfn));
 }
 
 int main(int argc, char** argv) {

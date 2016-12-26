@@ -2762,6 +2762,7 @@ static int shadow_l4e_set_aet_magic(struct vcpu *v, mfn_t sl4mfn) {
 }
 #endif
 
+unsigned long last_timestamp = 0;
 void vmx_vmexit_handler(struct cpu_user_regs *regs)
 {
     unsigned long exit_qualification, exit_reason, idtv_info, intr_info = 0;
@@ -2776,6 +2777,16 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 			//if (aet_count % 100 == 0) {
 				set_pending_page();
 			//}
+		}
+	}
+
+	if (is_l1_track()) { 
+		if (v->domain->domain_id == 1) { 
+			unsigned long timestamp_now = get_localtime_us(v->domain);
+			if (timestamp_now - 100000 > last_timestamp) { 
+				last_timestamp = timestamp_now;
+				rand_track_page();
+			}
 		}
 	}
 
