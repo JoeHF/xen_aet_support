@@ -2,12 +2,11 @@
 tmp_file=tmp.txt
 XC_DIR=./
 PMU_DIR=./
-array=0
-round=0
-if [ $# != 0 ]; then
-	array=$1
-	round=$2
+if [ $# != 1 ]; then
+	echo "need benchmark name"
+	exit 1
 fi
+benchmark=$1
 PF1=0
 PF2=0
 
@@ -58,7 +57,7 @@ stop_monitor() {
 run_spec() { 
 	echo "run spec!!"
 	#ssh 172.17.11.53 "/root/houfang/test_pmu/wssfake/wss_fake $array $round"
-	ssh 172.17.11.53 "/root/houfang/benchmark_script/gcc.sh"
+	ssh 172.17.11.53 "/root/houfang/benchmark_script/$benchmark.sh"
 	echo "------------"
 }
 
@@ -81,7 +80,9 @@ aet() {
 	$XC_DIR/xc -c $mem
 	xl dm -c >> /dev/null
 	$XC_DIR/xc -s 2
-	python graph.py -m $array -r $round
+	mv aet_hist.txt ./data/$benchmark 
+	mv miss_curve.txt ./data/$benchmark
+	python graph.py -b $benchmark
 	echo "------------"
 }
 

@@ -515,8 +515,8 @@ void set_pending_page() {
 
 	//printk("%s set aet magic num:%lu\n", __func__, aet_ctrl->set_num);
 	aet_ctrl->set_num = 0;
-	if (count != 0)
-		flush_tlb_local();
+	//if (count != 0)
+	//	flush_tlb_local();
 	//if (count != 0)
 	//	printk("[joe]%s set %lu page\n", __func__, count);
 }

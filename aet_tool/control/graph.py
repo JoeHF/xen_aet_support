@@ -15,14 +15,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from email.header import Header
 
-def read_aet_file(xaxis, yaxis):
-	fo = open("aet_hist.txt")
+aet_file_x_limit = 10000
+miss_curve_x_limit = 1000
+def read_aet_file(xaxis, yaxis, benchmark):
+	fo = open("./data/" + benchmark + "/aet_hist.txt")
 	tot = 0
 	y_tot = 0
 	for line in fo.readlines():
 		strs = line.split()
 		x = strs[0].split(':')[1]
-		if int(x) > 10000:
+		if int(x) > aet_file_x_limit:
 			break
 		y = strs[1].split(':')[1]
 		y_tot += int(y)
@@ -34,14 +36,14 @@ def read_aet_file(xaxis, yaxis):
 	print "total aet hist count:{0}".format(tot)
 	fo.close()
 
-def read_miss_curve_file(xaxis, yaxis):
-	fo = open("miss_curve.txt")
+def read_miss_curve_file(xaxis, yaxis, benchmark):
+	fo = open("./data/" + benchmark + "/miss_curve.txt")
 	odd = 0
 	tot = 0
 	for line in fo.readlines():
 		if odd % 2 == 1:
 			tot += 1
-			if tot > 1000:
+			if tot > miss_curve_x_limit:
 				break
 			xaxis.append(tot)
 			yaxis.append(float(line))
@@ -49,20 +51,23 @@ def read_miss_curve_file(xaxis, yaxis):
 
 
 if __name__=="__main__":
-	opts, args = getopt.getopt(sys.argv[1:], "m:r:")
+	#opts, args = getopt.getopt(sys.argv[1:], "m:r:")
+	opts, args = getopt.getopt(sys.argv[1:], "b:a:m:")
 	for op, value in opts:
-		if op == "-m":
-			mem = int(value)
-		elif op == "-r":
-			round = int(value)
+		if op == "-a":
+			aet_file_x_limit = int(value)
+		elif op == "-m":
+			miss_curve_x_limit = int(value)
+		elif op == "-b":
+			benchmark = value
 
-	aet_hist_graph_name = 'aet_hist_{0}_{1}.png'.format(mem, round)
-	miss_curve_graph_name = 'miss_curve_{0}_{1}.png'.format(mem, round)
-	aet_hist_graph_path = 'graph/' + aet_hist_graph_name
-	miss_curve_graph_path = 'graph/' + miss_curve_graph_name
+	aet_hist_graph_name = 'aet_hist_{0}.png'.format(benchmark)
+	miss_curve_graph_name = 'miss_curve_{0}.png'.format(benchmark)
+	aet_hist_graph_path = 'graph/' + benchmark + '/' + aet_hist_graph_name
+	miss_curve_graph_path = 'graph/' + benchmark + '/' + miss_curve_graph_name
 	x_axis = []
 	y_axis = []
-	read_aet_file(x_axis, y_axis)
+	read_aet_file(x_axis, y_axis, benchmark)
 	plt.figure(1)
 	plt.title(aet_hist_graph_name)
 	plt.plot(x_axis, y_axis)
@@ -70,7 +75,7 @@ if __name__=="__main__":
 
 	x_axis = []
 	y_axis = []
-	read_miss_curve_file(x_axis, y_axis)
+	read_miss_curve_file(x_axis, y_axis, benchmark)
 	plt.figure(2)
 	plt.title(miss_curve_graph_name)
 	plt.plot(x_axis, y_axis)
@@ -83,7 +88,7 @@ if __name__=="__main__":
 	message = MIMEMultipart()
 	message['From'] = Header("joe", 'utf-8')
 	message['To'] =  Header("joe", 'utf-8')
-	subject = 'mem:{0} round:{1} aet graph'.format(mem, round)
+	subject = '{0} aet graph'.format(benchmark)
 	message['Subject'] = Header(subject, 'utf-8')
 
 	#邮件正文内容
