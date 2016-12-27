@@ -3515,10 +3515,10 @@ static int sh_page_fault(struct vcpu *v,
 
 		unsigned long mem_counter;
 		mem_counter = pmu_mem_return(1, 0, &mem, &dtlb_load_miss, &dtlb_store_miss);
-	//	add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
+		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
 		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
 		if (mfn != 0)
-			track_aet_fault_result = track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss);
+			track_aet_fault_result = track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss, sl1mfn);
 		add_tracked_aet_magic_count1();
 	}
 	

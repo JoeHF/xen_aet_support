@@ -3,7 +3,7 @@
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
-#define CONSECUTIVE_SET_PAGE 1 
+#define CONSECUTIVE_SET_PAGE 2 
 #define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE)
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
@@ -87,6 +87,7 @@ struct hash_node {
 struct pending_node {
 	unsigned long sl1mfn;
 	unsigned long va;
+	int track_num;
 };
 
 struct AET_ctrl {
@@ -111,6 +112,8 @@ struct AET_ctrl {
 	unsigned long tot_ref_[MAX_DOM_NR];
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
+	unsigned long valid_node_count[MAX_DOM_NR];
+	unsigned long valid_sl1mfn[MAX_DOM_NR];
 	unsigned long hash_conflict_num;
 	/* add to pending set */
 	unsigned long set_num;
@@ -121,6 +124,8 @@ struct AET_ctrl {
 	unsigned long set_pending_page_num;
 	/* The following variable is used by iss16*/
 	unsigned long vmexit_num;
+	unsigned long surplus_total;
+	unsigned long surplus_time;
 };
 
 void aet_init(void);
@@ -154,7 +159,7 @@ void set_aet_start(unsigned long sl4mfn);
 int get_aet_start(unsigned long *sl4mfn);
 
 /* The following function is used for aet calculation */
-int track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3, unsigned long dtlb_miss);
+int track_aet_fault(int domain_id, unsigned long mfn, unsigned long mem_counter, unsigned long l3, unsigned long dtlb_miss, unsigned long sl1mfn);
 
 /* The following funcion is used for debug register*/
 void set_debug_reg(unsigned long va, int cpu_id, void *v);

@@ -13,10 +13,17 @@
 #include <public/xc_reserved_op.h>
 
 static struct AET_ctrl *aet_ctrl;
+static unsigned int randseed;
 static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
 static char* TRACK_NAME[3] = {"L1_TRACK", "L4_TRACK", "PAGE_FAULT_COUNT"};
 static char* OPEN_NAME[2] = {"CLOSED", "OPEN"};
 
+static unsigned int curl_rand(void) {
+	unsigned int r;
+	r = randseed = randseed * 1103515245 + 12345;
+	return (r << 16) | ((r >> 16) & 0xFFFF);
+}
+                                                                                                           
 void set_aet_start(unsigned long sl4mfn) {
 	aet_ctrl->start_ = 1;
 	aet_ctrl->sl4mfn_ = sl4mfn;
@@ -248,9 +255,9 @@ static void add_to_aet_first_hist2(int domain_id,
 		return;
 	}
 
-	surplus = mem_diff - dtlb_miss_diff;
-	surplus /= (aet_ctrl->node_count_[domain_id - 1] * TRACK_RATE); 
-	
+	aet_ctrl->surplus_total += mem_diff - dtlb_miss_diff;
+	aet_ctrl->surplus_time++;
+	surplus = (mem_diff - dtlb_miss_diff) / (aet_ctrl->valid_sl1mfn[domain_id - 1] * 512);
 	add_user_mode_fault_count(10, 0, 0, 0, surplus); // for debug
 	aet_ctrl->aet_hist_[domain_id - 1][1] += surplus;
 	aet_ctrl->tot_ref_[domain_id - 1] += surplus;
@@ -296,7 +303,8 @@ int track_aet_fault(int domain_id,
 					 unsigned long mfn, 
 					 unsigned long mem_counter, 
 					 unsigned long dtlb_load_miss,
-					 unsigned long dtlb_store_miss) {
+					 unsigned long dtlb_store_miss,
+					 unsigned long sl1mfn) {
 	int key;
 	int hash_pos = 0;
 	unsigned long page_fault_diff;
@@ -326,6 +334,8 @@ int track_aet_fault(int domain_id,
 				add_mem_counter(hn->track_time, hn->mem_counter, mem_counter); // for debug
 				add_diff(hn->track_time, dtlb_miss - hn->dtlb_miss, mem_counter - hn->mem_counter - mc_diff);
 				
+				//printk("valid sl1mfn:%lu\n", aet_ctrl->valid_sl1mfn[0]);
+				add_user_mode_fault_count(11, 0, 0, aet_ctrl->node_count_[0], (unsigned long)aet_ctrl->valid_sl1mfn[0]); // for debug	
 				add_to_aet_first_hist2(domain_id, hn->dtlb_miss, dtlb_miss, hn->mem_counter, mem_counter);
 			}
 
@@ -338,6 +348,20 @@ int track_aet_fault(int domain_id,
 			aet_ctrl->tot_ref_[domain_id - 1]++;
 			if (hn->track_time >= 2) { 
 				hn->track_time = 0;
+				aet_ctrl->valid_node_count[domain_id - 1]--;
+				/*
+				for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
+					if (aet_ctrl->all_sl1mfn[i].sl1mfn == sl1mfn) { 
+						printk("found in all sl1mfn all_sl1mfn track num:%d\n", aet_ctrl->all_sl1mfn[i].track_num);
+						if (aet_ctrl->all_sl1mfn[i].track_num <= 0) { 
+							printk("[Warning] sl1mfn track num less than zero\n");
+						}
+						aet_ctrl->all_sl1mfn[i].track_num--;
+						if (aet_ctrl->all_sl1mfn[i].track_num == 0)
+							aet_ctrl->valid_sl1mfn[0]--;
+					}
+				}
+				*/
 				return 0;
 			}
 
@@ -438,7 +462,7 @@ void track_debug_reg(unsigned long va) {
 /* The following function is used to add to pending set */
 #define L1_MASK  ((1UL << L2_PAGETABLE_SHIFT) - 1)
 void add_to_pending_page(unsigned long sl1mfn, unsigned long va) {
-	unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
+	//unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
 	int i;
 	// remove duplicate one
 	for (i = aet_ctrl->set_num - 1 ; i >= 0 ; i--) {
@@ -452,7 +476,7 @@ void add_to_pending_page(unsigned long sl1mfn, unsigned long va) {
 	}
 
 	aet_ctrl->pds[aet_ctrl->set_num].sl1mfn = sl1mfn;
-	aet_ctrl->pds[aet_ctrl->set_num].va = va_start;
+	aet_ctrl->pds[aet_ctrl->set_num].va = va;
 	aet_ctrl->set_num++;
 
 }
@@ -490,10 +514,12 @@ static inline u32 shadow_l1e_get_flags(shadow_l1e_t sl1e)
 
 void rand_track_page() { 
 	int i;
+	int j;
 	unsigned long sl1mfn, va;
 	unsigned long user_bit = 0x4;
 	unsigned long access_bit = 0x20;
-	int rand_pos = 0;
+	//int rands[5] = {3, 7, 20, 50, 511};
+	int rand_pos = curl_rand() % 512;
 	unsigned long count = 0;
 	shadow_l1e_t *sp, *sl1e;
 	printk("%s sl1mfn_num:%d\n", __func__, aet_ctrl->sl1mfn_num);
@@ -501,37 +527,66 @@ void rand_track_page() {
 		return;
 	}
 
+	//rand_pos = 0;
 	aet_ctrl->set_sl1mfn_page_num++;	
+	aet_ctrl->valid_sl1mfn[0] = 0;
 	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
+		if (aet_ctrl->all_sl1mfn[i].track_num >= 2) { 
+			//printk("already enough track sl1mfn\n");
+			aet_ctrl->valid_sl1mfn[0]++;
+			continue;
+		}
 		sl1mfn = aet_ctrl->all_sl1mfn[i].sl1mfn;
 		va = aet_ctrl->all_sl1mfn[i].va;
 		//add_set_aet_magic_count(va, 0, sl1mfn, 4, 0);
 		if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
 			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
 			sp = map_domain_page(sl1mfn);
-			sl1e = sp + rand_pos;	
-			if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
-				&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
-				&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
-				&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
-					count++;
-					sl1e->l1 |= SH_L1E_AET_MAGIC;
-					sl1e->l1 &= (~user_bit);
-					sl1e->l1 &= (~access_bit);
-					add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 3, 0);
-			}
+			//while (1) { 
+				for (j = 0 ; j < 2 ; j++) { 
+					sl1e = sp + rand_pos;	
+					//add_set_aet_magic_count(va, 0, sl1mfn, 4, rand_pos);
+					if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
+						&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
+						&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
+						&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
+							if (aet_ctrl->all_sl1mfn[i].track_num == 0)
+								aet_ctrl->valid_sl1mfn[0]++;
+							count++;
+							sl1e->l1 |= SH_L1E_AET_MAGIC;
+							sl1e->l1 &= (~user_bit);
+							sl1e->l1 &= (~access_bit);
+							aet_ctrl->valid_node_count[0]++;
+							add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 3, 0);
+							aet_ctrl->all_sl1mfn[i].track_num++;
+							if (aet_ctrl->all_sl1mfn[i].track_num >= 2)
+								break;
+					}
+					//rand_pos++;
+					rand_pos = rand_pos + curl_rand() % 512;
+					if (rand_pos >= 512) { 
+						rand_pos %= 512;
+					//	break;
+					}
+					//break;
+				}
+			//}
 		}
 		else { 
 	//		printk("[WARNING]%s sl1mfn:%lx va:%lx is not a l1 shadow page\n", __func__, sl1mfn, va);
 		}
 	}
 
-	printk("%s %lu/%d track\n", __func__, count, aet_ctrl->sl1mfn_num);
+	//add_set_aet_magic_count(aet_ctrl->valid_sl1mfn[0], 0, 0, 11, aet_ctrl->valid_node_count[0]);
+	add_set_aet_magic_count(aet_ctrl->valid_sl1mfn[0], 0, 0, 12, aet_ctrl->node_count_[0]);
+	printk("%s %lu/%d valid:%lu\n", __func__, count, aet_ctrl->sl1mfn_num, aet_ctrl->valid_sl1mfn[0]);
+	//printk("node count:%lu valid node count:%lu\n", aet_ctrl->valid_node_count[0], aet_ctrl->node_count_[0]);
 }
 
 
 void set_pending_page() {
-	int i, j;
+	//int i;
+	int j;
 	unsigned long sl1mfn;
 	shadow_l1e_t *sl1e;
 	unsigned long va;
@@ -539,6 +594,8 @@ void set_pending_page() {
 	unsigned long user_bit = 0x4;
 	unsigned long access_bit = 0x20;
 	unsigned long mc = 0;
+	unsigned long va_start;
+	unsigned long va_offset;
 	//unsigned long mem, dtlb_load_miss, dtlb_store_miss;
 	if (aet_ctrl->set_num == 0)
 		return;
@@ -554,10 +611,12 @@ void set_pending_page() {
 		//printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
 		sp = map_domain_page(sl1mfn);
 		va = aet_ctrl->pds[j].va;
+		va_start = va - (va & L1_MASK & PAGE_MASK);
+		va_offset = ((va & L1_MASK & PAGE_MASK) >> 12);
+		//add_set_aet_magic_count(va, 0, 0, 6, va_offset);
 		if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
 			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
-			for (i = 0 ; i < CONSECUTIVE_SET_PAGE ; i++) {
-				sl1e = sp + i;
+				sl1e = sp + va_offset;
 				if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
 					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
 					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
@@ -573,7 +632,6 @@ void set_pending_page() {
 				}
 				
 				va += (1 << 12);
-			}
 		}	
 		else {
 			printk("[WARNING]%s sl1mfn:%lx va:%lx is not a l1 shadow page\n", __func__, sl1mfn, va);
@@ -640,6 +698,7 @@ void aet_init() {
     alloc_shared_memory(sizeof(struct AET_ctrl), (unsigned long)aet_ctrl);
 
     memset(aet_ctrl, 0, sizeof(aet_ctrl));
+	randseed = (unsigned int) get_sec();
 	printk("[joe] aet_init end\n");
 }
 

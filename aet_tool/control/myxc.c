@@ -23,9 +23,14 @@ static void aet_process(int dom, unsigned long n) {
     unsigned long long m = aet_ctrl->node_count_[dom] * STEP;
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
     unsigned long long T = 0;
+	//unsigned long long surplus = aet_ctrl->surplus_total / aet_ctrl->surplus_time;
+	unsigned long long surplus;
     int domain = 256;
     double tot = 0;
 	//modified rtd 1
+	surplus /= STEP;
+	//aet_ctrl->aet_hist_[dom][1] += surplus;
+	//tott += surplus;
 	/*
 	if (tott < n / STEP) {
 		printf("[INFO] tot rtd count:%llu less than 1/100 mem access:%llu\n", tott, n);
@@ -37,11 +42,13 @@ static void aet_process(int dom, unsigned long n) {
     //double N = tott + m;
     double N = tott + 1.0 * tott / (n-m) * m;
 	double sum = 0.0;
+	
 	printf("endless:%lf\n", 1.0 * tott / (n - m) * m / N);
 	printf("m:%lu\n", m);
 	printf("n:%lu\n", n);
 	printf("tott:%lu\n", tott);
 	printf("N:%lf\n", N);
+	printf("surplus:%lu total:%lu time:%lu\n", surplus, aet_ctrl->surplus_total, aet_ctrl->surplus_time);
     unsigned long step = 1;
     int _dom = 0, dT = 0, loc = 0;
     unsigned long c;
@@ -95,6 +102,7 @@ void print(int arg) {
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
+		printf("valid sl1mfn:%lu valid node count:%lu\n", aet_ctrl->valid_sl1mfn[0], aet_ctrl->valid_node_count[0]);
 	}
 	
 	if (arg == 1) {
@@ -133,6 +141,8 @@ void print(int arg) {
 
 void reset() {
 	aet_ctrl->total_count = 0;
+	aet_ctrl->surplus_total = 0;
+	aet_ctrl->surplus_time = 0;
 	aet_ctrl->set_aet_magic_count = 0;
 	aet_ctrl->tracked_aet_magic_count1 = 0;
 	aet_ctrl->tracked_aet_magic_count2 = 0;
@@ -145,6 +155,7 @@ void reset() {
 	aet_ctrl->set_pending_page_num = 0;
 	aet_ctrl->sl1mfn_num = 0;
 	aet_ctrl->set_num = 0;
+	memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->node_count_, 0, sizeof(aet_ctrl->node_count_));
