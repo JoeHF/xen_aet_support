@@ -80,6 +80,12 @@ aet() {
 	$XC_DIR/xc -c $mem
 	xl dm -c >> /dev/null
 	$XC_DIR/xc -s 2
+	if [ ! -d "./data/$benchmark" ] ; then
+		mkdir ./data/$benchmark
+	fi
+	if [ ! -d "./graph/$benchmark" ] ; then
+		mkdir ./graph/$benchmark
+	fi
 	mv aet_hist.txt ./data/$benchmark 
 	mv miss_curve.txt ./data/$benchmark
 	python graph.py -b $benchmark

@@ -13,6 +13,7 @@
 #include <public/xc_reserved_op.h>
 
 static struct AET_ctrl *aet_ctrl;
+static unsigned int randseed;
 static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
 static char* TRACK_NAME[3] = {"L1_TRACK", "L4_TRACK", "PAGE_FAULT_COUNT"};
 static char* OPEN_NAME[2] = {"CLOSED", "OPEN"};
