@@ -13,6 +13,8 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <time.h>
 
 static struct AET_ctrl *aet_ctrl = (struct AET_ctrl *)PML4_ADDR(270ul);
 static char* NAME[10] = {"SET", "REVERSED", "USER_MODE", "TLB_COUNTER", "MEM_COUNTER", "DIFF"};
@@ -22,11 +24,34 @@ static void aet_process(int dom, unsigned long n) {
     int STEP = 256;
     unsigned long long m = aet_ctrl->node_count_[dom] * STEP;
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
+	if (tott == 0)
+		return;
     unsigned long long T = 0;
-	//unsigned long long surplus = aet_ctrl->surplus_total / aet_ctrl->surplus_time;
 	unsigned long long surplus;
+	struct timeval tv;
+	struct timezone tz;
+	gettimeofday(&tv, &tz);
     int domain = 256;
     double tot = 0;
+	char miss_curve_file_name[30];
+	FILE *fsz;
+    if (n != 0) { 
+		fsz	= fopen("miss_curve.txt","w");
+		printf("old miss curve file name\n");
+	}
+	else { 
+		sprintf(miss_curve_file_name, "%d_miss_curve.txt", tv.tv_sec);
+		fsz = fopen(miss_curve_file_name, "w");
+		printf("miss curve file name:%s\n", miss_curve_file_name);
+	}
+
+	if (n == 0) { 
+		n = aet_ctrl->mem_now - aet_ctrl->mem_last;
+		aet_ctrl->mem_last = aet_ctrl->mem_now;
+	}
+	else { 
+		n = n - aet_ctrl->mem_last;	
+	}
 	//modified rtd 1
 	surplus /= STEP;
 	//aet_ctrl->aet_hist_[dom][1] += surplus;
@@ -53,7 +78,7 @@ static void aet_process(int dom, unsigned long n) {
     int _dom = 0, dT = 0, loc = 0;
     unsigned long c;
     const int PGAP = 256;
-    FILE *fsz = fopen("miss_curve.txt","w");
+    		
     //printf("dom=%d",seq);
     m = 256 * 2000;
 	for (c = 1 ; c <= m ; c++) {
@@ -91,6 +116,8 @@ static void aet_process(int dom, unsigned long n) {
 		}
     }
     fclose(fsz);
+	aet_ctrl->tot_ref_[dom] = 0;
+	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 }
 //#endif
 void print(int arg) {
@@ -102,7 +129,7 @@ void print(int arg) {
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
-		printf("valid sl1mfn:%lu valid node count:%lu\n", aet_ctrl->valid_sl1mfn[0], aet_ctrl->valid_node_count[0]);
+		printf("valid sl1mfn:%lu \n", aet_ctrl->valid_sl1mfn[0]);
 	}
 	
 	if (arg == 1) {
@@ -154,8 +181,13 @@ void reset() {
 	aet_ctrl->hash_conflict_num = 0;
 	aet_ctrl->set_pending_page_num = 0;
 	aet_ctrl->sl1mfn_num = 0;
+	aet_ctrl->set_sl1mfn_page_num = 0;
 	aet_ctrl->set_num = 0;
-	memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
+	aet_ctrl->vmexit_num = 0;
+	aet_ctrl->mem_now = 0;
+	aet_ctrl->mem_last = 0;
+	memset(aet_ctrl->valid_sl1mfn, 0, sizeof(aet_ctrl->valid_sl1mfn));
+	//memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->node_count_, 0, sizeof(aet_ctrl->node_count_));

@@ -3,12 +3,12 @@
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
-#define CONSECUTIVE_SET_PAGE 2 
+#define CONSECUTIVE_SET_PAGE 8 
 #define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE)
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
 #define MAX_ARRAY_SIZE 40000
-#define MAX_PENDING_PAGE 4000
+#define MAX_PENDING_PAGE 8000
 
 #define DTLB_ENTRY 64
 #define HOT_SET_SIZE 10
@@ -112,7 +112,7 @@ struct AET_ctrl {
 	unsigned long tot_ref_[MAX_DOM_NR];
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
-	unsigned long valid_node_count[MAX_DOM_NR];
+	/*unsigned long valid_node_count[MAX_DOM_NR];*/
 	unsigned long valid_sl1mfn[MAX_DOM_NR];
 	unsigned long hash_conflict_num;
 	/* add to pending set */
@@ -126,6 +126,8 @@ struct AET_ctrl {
 	unsigned long vmexit_num;
 	unsigned long surplus_total;
 	unsigned long surplus_time;
+	unsigned long mem_now;
+	unsigned long mem_last;
 };
 
 void aet_init(void);

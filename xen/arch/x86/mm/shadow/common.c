@@ -2345,10 +2345,10 @@ int sh_remove_write_access(struct vcpu *v, mfn_t gmfn,
         if ( level == 0 )
             return -1;
 
+		return 1;
         SHADOW_ERROR("can't remove write access to mfn %lx: guest has "
                       "%lu special-use mappings of it\n", mfn_x(gmfn),
                       (mfn_to_page(gmfn)->u.inuse.type_info&PGT_count_mask));
-		//hash_foreach(v, callback_mask, callbacks, gmfn);
         domain_crash(v->domain);
     }
     

@@ -56,9 +56,20 @@ stop_monitor() {
 
 run_spec() { 
 	echo "run spec!!"
+	rm 148* -f
+	./time_aet.sh &
+	time_pid=$!
 	#ssh 172.17.11.53 "/root/houfang/test_pmu/wssfake/wss_fake $array $round"
 	ssh 172.17.11.53 "/root/houfang/benchmark_script/$benchmark.sh"
 	echo "------------"
+	kill $time_pid
+	./test.sh $benchmark
+	rm -rf ./temp/$benchmark
+	if [ ! -d "./temp/$benchmark" ] ; then
+		mkdir -p ./temp/$benchmark
+	fi
+	mv 148* ./temp/$benchmark
+	python test.py $benchmark
 }
 
 read_pmu() { 
@@ -80,6 +91,12 @@ aet() {
 	$XC_DIR/xc -c $mem
 	xl dm -c >> /dev/null
 	$XC_DIR/xc -s 2
+	if [ ! -d "./data/$benchmark" ] ; then
+		mkdir ./data/$benchmark
+	fi
+	if [ ! -d "./graph/$benchmark" ] ; then
+		mkdir ./graph/$benchmark
+	fi
 	mv aet_hist.txt ./data/$benchmark 
 	mv miss_curve.txt ./data/$benchmark
 	python graph.py -b $benchmark

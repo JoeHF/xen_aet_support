@@ -1,0 +1,13 @@
+sh run_fake_pmu.sh fullastar
+sh run_fake_pmu.sh fullbzip2 
+sh run_fake_pmu.sh fullbwaves 
+sh run_fake_pmu.sh fullgcc 
+sh run_fake_pmu.sh fullmcf 
+sh run_fake_pmu.sh fullmilc 
+sh run_fake_pmu.sh fullxalan 
+sh run_fake_pmu.sh fullzeusmp 
+sh run_fake_pmu.sh fullcactus
+sh run_fake_pmu.sh fulldeal
+sh run_fake_pmu.sh fullgems
+sh run_fake_pmu.sh fulllbm
+sh run_fake_pmu.sh fullwrf

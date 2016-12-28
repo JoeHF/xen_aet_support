@@ -235,7 +235,7 @@ static void add_to_aet_first_hist2(int domain_id,
 								   unsigned long new_mem) { 
 	unsigned long dtlb_miss_diff;
 	unsigned long mem_diff;
-	unsigned long surplus;
+	unsigned long surplus = 0;
 	if (old_dtlb >= new_dtlb) { 
 		printk("[WARNING] old dtlb counter:%lu is larger than the new dtlb counter:%lu\n", old_dtlb, new_dtlb);
 		return;
@@ -257,7 +257,10 @@ static void add_to_aet_first_hist2(int domain_id,
 
 	aet_ctrl->surplus_total += mem_diff - dtlb_miss_diff;
 	aet_ctrl->surplus_time++;
-	surplus = (mem_diff - dtlb_miss_diff) / (aet_ctrl->valid_sl1mfn[domain_id - 1] * 512);
+	if (aet_ctrl->valid_sl1mfn[domain_id - 1] != 0)
+		surplus = (mem_diff - dtlb_miss_diff) / (aet_ctrl->valid_sl1mfn[domain_id - 1] * 512);
+	else
+		printk("[WARNING] valid sl1mfn is zero\n");
 	add_user_mode_fault_count(10, 0, 0, 0, surplus); // for debug
 	aet_ctrl->aet_hist_[domain_id - 1][1] += surplus;
 	aet_ctrl->tot_ref_[domain_id - 1] += surplus;
@@ -305,6 +308,7 @@ int track_aet_fault(int domain_id,
 					 unsigned long dtlb_load_miss,
 					 unsigned long dtlb_store_miss,
 					 unsigned long sl1mfn) {
+	int i;
 	int key;
 	int hash_pos = 0;
 	unsigned long page_fault_diff;
@@ -312,6 +316,7 @@ int track_aet_fault(int domain_id,
 	//unsigned long real_dtlb_miss_diff;
 	unsigned long dtlb_miss;
 	struct hash_node *hn;
+	aet_ctrl->mem_now = mem_counter;
 	key = mfn % HASH;
 	dtlb_miss = dtlb_load_miss + dtlb_store_miss;
 	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
@@ -348,20 +353,21 @@ int track_aet_fault(int domain_id,
 			aet_ctrl->tot_ref_[domain_id - 1]++;
 			if (hn->track_time >= 2) { 
 				hn->track_time = 0;
-				aet_ctrl->valid_node_count[domain_id - 1]--;
-				/*
+				//aet_ctrl->valid_node_count[domain_id - 1]--;
+				
 				for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
 					if (aet_ctrl->all_sl1mfn[i].sl1mfn == sl1mfn) { 
-						printk("found in all sl1mfn all_sl1mfn track num:%d\n", aet_ctrl->all_sl1mfn[i].track_num);
 						if (aet_ctrl->all_sl1mfn[i].track_num <= 0) { 
 							printk("[Warning] sl1mfn track num less than zero\n");
 						}
 						aet_ctrl->all_sl1mfn[i].track_num--;
 						if (aet_ctrl->all_sl1mfn[i].track_num == 0)
 							aet_ctrl->valid_sl1mfn[0]--;
+
+						break;
 					}
 				}
-				*/
+				
 				return 0;
 			}
 
@@ -522,7 +528,7 @@ void rand_track_page() {
 	int rand_pos = curl_rand() % 512;
 	unsigned long count = 0;
 	shadow_l1e_t *sp, *sl1e;
-	printk("%s sl1mfn_num:%d\n", __func__, aet_ctrl->sl1mfn_num);
+	//printk("%s sl1mfn_num:%d\n", __func__, aet_ctrl->sl1mfn_num);
 	if (aet_ctrl->sl1mfn_num == 0) { 
 		return;
 	}
@@ -531,7 +537,7 @@ void rand_track_page() {
 	aet_ctrl->set_sl1mfn_page_num++;	
 	aet_ctrl->valid_sl1mfn[0] = 0;
 	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
-		if (aet_ctrl->all_sl1mfn[i].track_num >= 2) { 
+		if (aet_ctrl->all_sl1mfn[i].track_num >= CONSECUTIVE_SET_PAGE) { 
 			//printk("already enough track sl1mfn\n");
 			aet_ctrl->valid_sl1mfn[0]++;
 			continue;
@@ -543,7 +549,7 @@ void rand_track_page() {
 			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
 			sp = map_domain_page(sl1mfn);
 			//while (1) { 
-				for (j = 0 ; j < 2 ; j++) { 
+				for (j = 0 ; j < CONSECUTIVE_SET_PAGE ; j++) { 
 					sl1e = sp + rand_pos;	
 					//add_set_aet_magic_count(va, 0, sl1mfn, 4, rand_pos);
 					if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
@@ -556,12 +562,16 @@ void rand_track_page() {
 							sl1e->l1 |= SH_L1E_AET_MAGIC;
 							sl1e->l1 &= (~user_bit);
 							sl1e->l1 &= (~access_bit);
-							aet_ctrl->valid_node_count[0]++;
+							//aet_ctrl->valid_node_count[0]++;
 							add_set_aet_magic_count(va, sl1e->l1, (unsigned long)sl1e, 3, 0);
 							aet_ctrl->all_sl1mfn[i].track_num++;
-							if (aet_ctrl->all_sl1mfn[i].track_num >= 2)
+							if (aet_ctrl->all_sl1mfn[i].track_num >= CONSECUTIVE_SET_PAGE)
 								break;
 					}
+	//				else { 
+	//					j--;
+	//				}
+
 					//rand_pos++;
 					rand_pos = rand_pos + curl_rand() % 512;
 					if (rand_pos >= 512) { 
@@ -579,7 +589,7 @@ void rand_track_page() {
 
 	//add_set_aet_magic_count(aet_ctrl->valid_sl1mfn[0], 0, 0, 11, aet_ctrl->valid_node_count[0]);
 	add_set_aet_magic_count(aet_ctrl->valid_sl1mfn[0], 0, 0, 12, aet_ctrl->node_count_[0]);
-	printk("%s %lu/%d valid:%lu\n", __func__, count, aet_ctrl->sl1mfn_num, aet_ctrl->valid_sl1mfn[0]);
+	//printk("%s %lu/%d valid:%lu\n", __func__, count, aet_ctrl->sl1mfn_num, aet_ctrl->valid_sl1mfn[0]);
 	//printk("node count:%lu valid node count:%lu\n", aet_ctrl->valid_node_count[0], aet_ctrl->node_count_[0]);
 }
 

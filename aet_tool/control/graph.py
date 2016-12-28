@@ -17,11 +17,21 @@ from email.header import Header
 
 aet_file_x_limit = 10000
 miss_curve_x_limit = 1000
+aet1 = 0
 def read_aet_file(xaxis, yaxis, benchmark):
+	global aet1
 	fo = open("./data/" + benchmark + "/aet_hist.txt")
 	tot = 0
 	y_tot = 0
+	first = 0
 	for line in fo.readlines():
+		first += 1
+		if first == 2:
+			strs = line.split()
+			y = strs[1].split(':')[1]
+			aet1 = int(y)
+			continue
+
 		strs = line.split()
 		x = strs[0].split(':')[1]
 		if int(x) > aet_file_x_limit:
@@ -92,7 +102,8 @@ if __name__=="__main__":
 	message['Subject'] = Header(subject, 'utf-8')
 
 	#邮件正文内容
-	message.attach(MIMEText('aet重用时间分布', 'plain', 'utf-8'))
+	content = 'aet重用时间分布 aet hist 1:{0}'.format(aet1)
+	message.attach(MIMEText(content, 'plain', 'utf-8'))
 
 	# 构造附件1，传送当前目录下的 test.txt 文件
 	#att1 = MIMEText(open('aet_hist.png', 'rb').read(), 'base64', 'utf-8')

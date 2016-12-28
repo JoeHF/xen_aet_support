@@ -4776,12 +4776,19 @@ int sh_rm_write_access_from_l1(struct vcpu *v, mfn_t sl1mfn,
 		//if (is_aet_track_open()) {
 			if (sh_l1e_is_aet_magic(*sl1e)
 				&& ((mfn_x(shadow_l1e_get_mfn(*sl1e))) & 0x7fffffffff) == mfn_x(readonly_mfn)) {
-				//printk("[joe] sh_rm_write_access_from_l1 sl1mfn:%lx readonly_mfn:%lx sl1e:%p %lx shadow_l1e_get_mfn(*sl1e):%lx\n", sl1mfn, readonly_mfn, sl1e, sl1e->l1, shadow_l1e_get_mfn(*sl1e));
+			//	printk("[joe] sh_rm_write_access_from_l1 sl1mfn:%lx readonly_mfn:%lx sl1e:%p %lx shadow_l1e_get_mfn(*sl1e):%lx\n", sl1mfn, readonly_mfn, sl1e, sl1e->l1, shadow_l1e_get_mfn(*sl1e));
 				add_reversed_aet_magic_count(0, sl1e->l1);
 				sl1e->l1 &= (~SH_L1E_AET_MAGIC);
 				sl1e->l1 |= (_PAGE_USER);
 			}
 		//}
+		if (sh_l1e_is_aet_magic(*sl1e)) { 
+			//printk("sh_rm_write_access_from_l1 sl1mfn:%lx readonly_mfn:%lx sl1e:%p %lx shadow_l1e_get_mfn(*sl1e):%lx\n", sl1mfn, readonly_mfn, sl1e, sl1e->l1, shadow_l1e_get_mfn(*sl1e));
+		}
+
+		if (mfn_x(shadow_l1e_get_mfn(*sl1e)) == mfn_x(readonly_mfn)) { 
+			//printk("found sl1e:%p %lx\n", sl1e, sl1e->l1);
+		}
 #endif
 #endif
         flags = shadow_l1e_get_flags(*sl1e);
