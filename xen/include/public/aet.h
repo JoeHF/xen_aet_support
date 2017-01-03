@@ -109,6 +109,7 @@ struct AET_ctrl {
 	unsigned long sl4mfn_;
 	enum TRACK track_;
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];	
+	int longest_aet_hist_pos[MAX_DOM_NR];
 	unsigned long tot_ref_[MAX_DOM_NR];
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];

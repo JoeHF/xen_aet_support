@@ -225,6 +225,10 @@ static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned l
 		return;
 	}
 
+	if (compressed_dis > aet_ctrl->longest_aet_hist_pos[domain_id - 1]) { 
+		aet_ctrl->longest_aet_hist_pos[domain_id - 1] = compressed_dis;
+	}
+
 	aet_ctrl->aet_hist_[domain_id - 1][compressed_dis]++;
 }
 

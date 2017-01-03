@@ -26,7 +26,7 @@ subject = '{0} aet graph'.format(benchmark)
 message['Subject'] = Header(subject, 'utf-8')
 
 #邮件正文内容
-content = 'miss_curve graph {0}'.format(benchmark)
+content = 'all stage miss_curve graph {0}'.format(benchmark)
 message.attach(MIMEText(content, 'plain', 'utf-8'))
 sender = 'from@runoob.com'
 receivers = ['707980114@qq.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱

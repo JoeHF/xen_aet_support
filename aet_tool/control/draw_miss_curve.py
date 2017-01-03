@@ -16,7 +16,7 @@ from email.mime.image import MIMEImage
 from email.header import Header
 
 aet_file_x_limit = 10000
-miss_curve_x_limit = 1000
+miss_curve_x_limit = 2000
 aet1 = 0
 def read_aet_file(xaxis, yaxis, benchmark):
 	global aet1

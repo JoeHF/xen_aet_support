@@ -12,10 +12,16 @@ PF2=0
 
 cpu_bind() { 
 	echo "bind cpu!!"
-	domu_cpu=1
-	dom0_cpu=0
-	xl vcpu-set 0 1
-	xl vcpu-pin 0 0 $dom0_cpu
+	dom0_cpu1=1
+	dom0_cpu2=2
+	dom0_cpu3=3
+	dom0_cpu4=4
+	domu_cpu=0
+	xl vcpu-set 0 4
+	xl vcpu-pin 0 0 $dom0_cpu1
+	xl vcpu-pin 0 1 $dom0_cpu2
+	xl vcpu-pin 0 2 $dom0_cpu3
+	xl vcpu-pin 0 3 $dom0_cpu4
 	xl vcpu-pin 1 0 $domu_cpu
 	echo "------------"
 }
@@ -61,8 +67,16 @@ run_spec() {
 	time_pid=$!
 	#ssh 172.17.11.53 "/root/houfang/test_pmu/wssfake/wss_fake $array $round"
 	ssh 172.17.11.53 "/root/houfang/benchmark_script/$benchmark.sh"
-	echo "------------"
 	kill $time_pid
+	echo "------------"
+	tmp="hi"
+	while [ -n "$tmp" ]
+	do
+		echo $tmp
+		echo "wait aet calculate end"
+		tmp=`ps -A | awk '{print $4}'  | grep -w xc`
+		sleep 10
+	done
 	./test.sh $benchmark
 	rm -rf ./temp/$benchmark
 	if [ ! -d "./temp/$benchmark" ] ; then
@@ -113,5 +127,5 @@ open_monitor
 run_spec
 stop_monitor
 read_pmu
-aet
+#aet
 end
