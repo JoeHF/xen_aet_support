@@ -3,18 +3,19 @@
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
-#define CONSECUTIVE_SET_PAGE 8 
+#define CONSECUTIVE_SET_PAGE 1
 #define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE)
+#define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
-#define MAX_ARRAY_SIZE 40000
+#define MAX_ARRAY_SIZE 0
 #define MAX_PENDING_PAGE 8000
 
 #define DTLB_ENTRY 64
 #define HOT_SET_SIZE 10
 
 #define HASH 49997
-#define HASH_CONFLICT_NUM 2
+#define HASH_CONFLICT_NUM 3
 
 #define DEBUG_DR6 0xffff0fff
 #define DEBUG_DR7 0xbbbb07ff
@@ -82,6 +83,7 @@ struct hash_node {
 	unsigned long dtlb_store_miss;
 	unsigned long pf;
 	int track_time;
+	int sl1mfn;
 };
 
 struct pending_node {
@@ -127,6 +129,8 @@ struct AET_ctrl {
 	unsigned long vmexit_num;
 	unsigned long surplus_total;
 	unsigned long surplus_time;
+	unsigned long dtlb_miss_now;
+	unsigned long dtlb_miss_last;
 	unsigned long mem_now;
 	unsigned long mem_last;
 };

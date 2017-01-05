@@ -12,11 +12,11 @@ PF2=0
 
 cpu_bind() { 
 	echo "bind cpu!!"
-	dom0_cpu1=1
+	dom0_cpu1=0
 	dom0_cpu2=2
 	dom0_cpu3=3
 	dom0_cpu4=4
-	domu_cpu=0
+	domu_cpu=1
 	xl vcpu-set 0 4
 	xl vcpu-pin 0 0 $dom0_cpu1
 	xl vcpu-pin 0 1 $dom0_cpu2
@@ -37,12 +37,13 @@ init() {
 
 open_monitor() { 
 	echo "open monitor!!"
-	# open monitor
-	`$PMU_DIR/a.out 2 1 1 0`
 	#stop and clear
 	`$PMU_DIR/a.out 1 $domu_cpu 2 1`
 	#start pmu
 	`$PMU_DIR/a.out 1 $domu_cpu 1 0`
+	# open monitor
+	`$PMU_DIR/a.out 2 1 1 0`
+
 	xl dm -c >> /dev/null
 	echo "------------"
 }
@@ -63,7 +64,7 @@ stop_monitor() {
 run_spec() { 
 	echo "run spec!!"
 	rm 148* -f
-	./time_aet.sh &
+	./time_aet.sh $benchmark &
 	time_pid=$!
 	#ssh 172.17.11.53 "/root/houfang/test_pmu/wssfake/wss_fake $array $round"
 	ssh 172.17.11.53 "/root/houfang/benchmark_script/$benchmark.sh"
@@ -77,7 +78,7 @@ run_spec() {
 		tmp=`ps -A | awk '{print $4}'  | grep -w xc`
 		sleep 10
 	done
-	./test.sh $benchmark
+	./draw_pic.sh $benchmark
 	rm -rf ./temp/$benchmark
 	if [ ! -d "./temp/$benchmark" ] ; then
 		mkdir -p ./temp/$benchmark
