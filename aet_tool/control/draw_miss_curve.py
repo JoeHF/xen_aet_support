@@ -17,34 +17,6 @@ from email.header import Header
 
 aet_file_x_limit = 10000
 miss_curve_x_limit = 2000
-aet1 = 0
-def read_aet_file(xaxis, yaxis, benchmark):
-	global aet1
-	fo = open("./data/" + benchmark + "/aet_hist.txt")
-	tot = 0
-	y_tot = 0
-	first = 0
-	for line in fo.readlines():
-		first += 1
-		if first == 2:
-			strs = line.split()
-			y = strs[1].split(':')[1]
-			aet1 = int(y)
-			continue
-
-		strs = line.split()
-		x = strs[0].split(':')[1]
-		if int(x) > aet_file_x_limit:
-			break
-		y = strs[1].split(':')[1]
-		y_tot += int(y)
-		tot += int(y)
-		if int(x) % 20 == 0:
-			xaxis.append(int(x))
-			yaxis.append(y_tot)
-			y_tot = 0
-	print "total aet hist count:{0}".format(tot)
-	fo.close()
 
 def read_miss_curve_file(xaxis, yaxis, name):
 	fo = open(name)
