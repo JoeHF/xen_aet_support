@@ -3,8 +3,9 @@
 #define SHARED_DATA_PML4 270
 #define SHARED_DATA_START (PML4_ADDR(270))
 
-#define CONSECUTIVE_SET_PAGE 1
-#define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE)
+#define TRACK_DISTANCE 10
+#define CONSECUTIVE_SET_PAGE 2
+#define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE * TRACK_DISTANCE)
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
@@ -110,18 +111,21 @@ struct AET_ctrl {
 	struct last_pte lps[HOT_SET_SIZE];
 	unsigned long sl4mfn_;
 	enum TRACK track_;
+	/* aet related data structure */
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];	
 	int longest_aet_hist_pos[MAX_DOM_NR];
 	unsigned long tot_ref_[MAX_DOM_NR];
+
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
-	/*unsigned long valid_node_count[MAX_DOM_NR];*/
 	unsigned long valid_sl1mfn[MAX_DOM_NR];
-	unsigned long hash_conflict_num;
+	unsigned long hash_conflict_num1;
+	unsigned long hash_conflict_num2;
 	/* add to pending set */
 	unsigned long set_num;
 	struct pending_node pds[MAX_PENDING_PAGE];
 	int sl1mfn_num;
+	int sl1mfn_start;
 	struct pending_node all_sl1mfn[MAX_PENDING_PAGE];
 	unsigned long set_sl1mfn_page_num;
 	unsigned long set_pending_page_num;

@@ -410,8 +410,8 @@ int track_aet_fault(int domain_id,
 		}
 	}
 
-	printk("[WARN] track aet fault can not find hash conflict because it is already check in rand track page\n");
-	aet_ctrl->hash_conflict_num++;
+	//printk("[WARN] track aet fault can not find hash conflict because it is already check in rand track page\n");
+	aet_ctrl->hash_conflict_num2++;
 	return 0;
 }
 
@@ -541,7 +541,72 @@ typedef l1_pgentry_t shadow_l1e_t;
 #define SH_L1E_AET_MAGIC 0x7ff8000000000400ULL
 static inline u32 shadow_l1e_get_flags(shadow_l1e_t sl1e)
 { return l1e_get_flags(sl1e); }
+/*
+static void rand_track_algorithm(void) { 
+	int i, j, hash_pos;
+	unsigned long sl1mfn, va;
+	shadow_l1e_t *sp, *sl1e;
+	int rand_pos = curl_rand() % (TRACK_RATE * 2);
+	int counter = 0;
+	unsigned long mfn;
+	int key;
+	int hash_conflict;
+	int count = 0;
+	struct hash_node *hn;
+	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
+		sl1mfn = aet_ctrl->all_sl1mfn[i].sl1mfn;
+		va = aet_ctrl->all_sl1mfn[i].va;
+		if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
+			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
+			sp = map_domain_page(sl1mfn);
+			for (j = 0 ; j < 512 ; j++) { 
+				sl1e = sp + j;
+				if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
+					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
+					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
+					&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) { 
+					if (counter == rand_pos) { 
+						counter = 0;
+						rand_pos = curl_rand() % (TRACK_RATE * 2);
+						mfn = (sl1e->l1 & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
+						key = mfn % HASH;
+						hash_conflict = 1;
+						for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
 
+							hn = aet_ctrl->hns_[0][key] + hash_pos;
+							if (hn->mfn == 0) { 
+								hn->mfn = mfn;
+								hn->sl1mfn = i;
+								hash_conflict = 0;
+								break;
+							}
+							else if (hn->mfn == mfn) { 
+								hn->sl1mfn = i;
+								hash_conflict = 0;
+								break;
+							}
+						}
+
+						if (hash_conflict == 0) { 
+							count++;
+						
+						}
+						else { 
+							//aet_ctrl->hash_conflict_num1++;
+						}
+					}
+					else { 
+						counter++;
+						continue;
+					}
+				}
+			}
+		}
+	}
+	
+	printk("%s count:%d\n", __func__, count);
+}
+*/
 void rand_track_page() { 
 	int i;
 	int j;
@@ -550,7 +615,7 @@ void rand_track_page() {
 	unsigned long access_bit = 0x20;
 	//int rands[5] = {3, 7, 20, 50, 511};
 	int rand_pos = curl_rand() % 512;
-	unsigned long count = 0;
+	int count = 0;
 	unsigned long mfn;
 	int key;
 	int hash_pos;
@@ -563,22 +628,30 @@ void rand_track_page() {
 	}
 
 	printk("%s\n", __func__);
+	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
+	memset(aet_ctrl->pds, 0, sizeof(aet_ctrl->pds));
 	//rand_pos = 0;
 	aet_ctrl->set_sl1mfn_page_num++;	
 	aet_ctrl->valid_sl1mfn[0] = 0;
-	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
+	i = aet_ctrl->sl1mfn_start;
+	aet_ctrl->sl1mfn_start = (aet_ctrl->sl1mfn_start + 1) % TRACK_DISTANCE; 
+	//rand_track_algorithm();
+	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
+	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i+=TRACK_DISTANCE) { 
+		aet_ctrl->all_sl1mfn[i].track_num = 0;
+		/*
 		if (aet_ctrl->all_sl1mfn[i].track_num >= CONSECUTIVE_SET_PAGE) { 
 			//printk("already enough track sl1mfn\n");
 			aet_ctrl->valid_sl1mfn[0]++;
 			continue;
 		}
+		*/
 		sl1mfn = aet_ctrl->all_sl1mfn[i].sl1mfn;
 		va = aet_ctrl->all_sl1mfn[i].va;
 		//add_set_aet_magic_count(va, 0, sl1mfn, 4, 0);
 		if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
 			|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
 			sp = map_domain_page(sl1mfn);
-			//while (1) { 
 				for (j = 0 ; j < CONSECUTIVE_SET_PAGE && aet_ctrl->all_sl1mfn[i].track_num < CONSECUTIVE_SET_PAGE ; j++) { 
 					sl1e = sp + rand_pos;	
 					hash_conflict = 1;
@@ -587,9 +660,7 @@ void rand_track_page() {
 						&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
 						&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
 						&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) {
-							if (aet_ctrl->all_sl1mfn[i].track_num == 0)
-								aet_ctrl->valid_sl1mfn[0]++;
-							count++;
+							
 							mfn = (sl1e->l1 & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
 							//printk("sl1e:%lx mfn:%lx\n", sl1e->l1, mfn);
 							key = mfn % HASH;
@@ -609,6 +680,9 @@ void rand_track_page() {
 							}
 
 							if (hash_conflict == 0) { 
+								if (aet_ctrl->all_sl1mfn[i].track_num == 0)
+									aet_ctrl->valid_sl1mfn[0]++;
+								count++;
 								sl1e->l1 |= SH_L1E_AET_MAGIC;
 								sl1e->l1 &= (~user_bit);
 								sl1e->l1 &= (~access_bit);
@@ -619,7 +693,7 @@ void rand_track_page() {
 									break;
 							}
 							else { 
-								aet_ctrl->hash_conflict_num++;
+								aet_ctrl->hash_conflict_num1++;
 							}
 					}
 	//				else { 
@@ -641,6 +715,7 @@ void rand_track_page() {
 		}
 	}
 
+	printk("%s count:%d\n", __func__, count);
 	//add_set_aet_magic_count(aet_ctrl->valid_sl1mfn[0], 0, 0, 11, aet_ctrl->valid_node_count[0]);
 	add_set_aet_magic_count(aet_ctrl->valid_sl1mfn[0], 0, 0, 12, aet_ctrl->node_count_[0]);
 	//printk("%s %lu/%d valid:%lu\n", __func__, count, aet_ctrl->sl1mfn_num, aet_ctrl->valid_sl1mfn[0]);

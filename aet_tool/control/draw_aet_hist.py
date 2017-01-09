@@ -26,6 +26,8 @@ def read_aet_file(xaxis, yaxis, name):
 	x = 0
 	for line in fo.readlines():
 		x += 1
+		if x > aet_file_x_limit:
+			break
 		y = int(line) 
 		y_tot += int(y)
 		tot += int(y)

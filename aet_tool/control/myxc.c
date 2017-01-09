@@ -180,7 +180,7 @@ void print(int arg) {
 		printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
-		printf("hash conflict:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num, aet_ctrl->vmexit_num);
+		printf("hash conflict1:%llu hash conflict2:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num1, aet_ctrl->hash_conflict_num2, aet_ctrl->vmexit_num);
 		printf("valid sl1mfn:%lu \n", aet_ctrl->valid_sl1mfn[0]);
 	}
 	
@@ -230,7 +230,8 @@ void reset() {
 	aet_ctrl->user_mode_fault = 0;
 	aet_ctrl->reserved_bit_fault = 0;
 	aet_ctrl->both_fault = 0;
-	aet_ctrl->hash_conflict_num = 0;
+	aet_ctrl->hash_conflict_num1 = 0;
+	aet_ctrl->hash_conflict_num2 = 0;
 	aet_ctrl->set_pending_page_num = 0;
 	aet_ctrl->sl1mfn_num = 0;
 	aet_ctrl->set_sl1mfn_page_num = 0;
