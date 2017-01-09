@@ -57,7 +57,7 @@ def read_miss_curve_file(xaxis, yaxis, name):
 				if tot > miss_curve_x_limit:
 					break
 				xaxis.append(tot)
-				if (float(line) < 0.001):
+				if (float(line) > 0.001):
 					yaxis.append(0.0)
 				else:	
 					yaxis.append(float(line))
