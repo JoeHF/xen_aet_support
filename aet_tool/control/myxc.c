@@ -242,6 +242,9 @@ void reset() {
 	aet_ctrl->mem_last = 0;
 	aet_ctrl->dtlb_miss_now = 0;
 	aet_ctrl->dtlb_miss_last = 0;
+	aet_ctrl->hot_set_time = 0;
+	aet_ctrl->hot_set_pos = 0;
+	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
 	memset(aet_ctrl->valid_sl1mfn, 0, sizeof(aet_ctrl->valid_sl1mfn));
 	//memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
@@ -251,7 +254,6 @@ void reset() {
 	memset(aet_ctrl->tot_ref_, 0, sizeof(aet_ctrl->tot_ref_));
 	memset(aet_ctrl->lps, 0, sizeof(aet_ctrl->lps));
 	memset(aet_ctrl->tvs, 0, sizeof(aet_ctrl->tvs));
-	memset(aet_ctrl->pds, 0, sizeof(aet_ctrl->pds));
 	memset(aet_ctrl->all_sl1mfn, 0, sizeof(aet_ctrl->all_sl1mfn));
 }
 

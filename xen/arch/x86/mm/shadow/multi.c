@@ -1796,7 +1796,6 @@ static inline void set_aet_magic(mfn_t sl1mfn, shadow_l1e_t *ptr_sl1e, unsigned 
 		return;
 	}
 	
-	add_to_pending_page(sl1mfn, va);
 	//add_to_all_sl1mfn(sl1mfn, va);
 	//printk("[joe]%s sl1mfn:%lx\n", __func__, sl1mfn);
 	//SHADOW_FOREACH_L1E(sl1mfn, sl1p, 0, done, {
@@ -3515,7 +3514,7 @@ static int sh_page_fault(struct vcpu *v,
 
 		unsigned long mem_counter;
 		mem_counter = pmu_mem_return(1, 0, &mem, &dtlb_load_miss, &dtlb_store_miss);
-		add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
+		//add_user_mode_fault_count(va, (unsigned long)ptr_sl1e->l1, (unsigned long)ptr_sl1e, regs->error_code, mem_counter);
 		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
 		if (mfn != 0)
 			track_aet_fault_result = track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss, sl1mfn);
@@ -3538,9 +3537,6 @@ static int sh_page_fault(struct vcpu *v,
 				add_to_all_sl1mfn(sl1mfn, va);
 		}
 
-		if (is_l1_track() && !(guest_l2e_get_flags(gw.l2e) & _PAGE_PSE) && track_aet_fault_result) {
-			set_aet_magic(sl1mfn, ptr_sl1e, va);
-		}
 	}
 
 	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {

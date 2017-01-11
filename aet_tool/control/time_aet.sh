@@ -5,7 +5,7 @@ declare -A map=(["fullastar"]="400" ["fullbzip2"]="1000" ["fullbwaves"]="1000" [
 echo ${map[$benchmark]}
 while [ 1 ]
 do
-	sleep 60
+	sleep 15
 	#./xc -c 0 -l ${map[$benchmark]} & 
 	./xc -c 0 -l 2000 & 
 done

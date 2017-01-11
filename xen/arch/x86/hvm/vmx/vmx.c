@@ -2775,7 +2775,6 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 			add_vmexit_num();
 			aet_count++;
 			//if (aet_count % 100 == 0) {
-				set_pending_page();
 			//}
 		}
 	}
@@ -2783,7 +2782,7 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 	if (is_l1_track()) { 
 		if (v->domain->domain_id == 1) { 
 			unsigned long timestamp_now = get_localtime_us(v->domain);
-			if (timestamp_now - 30000000 > last_timestamp) { 
+			if (timestamp_now - 10000000 > last_timestamp) { 
 				last_timestamp = timestamp_now;
 				rand_track_page();
 			}

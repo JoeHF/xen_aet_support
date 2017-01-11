@@ -9,8 +9,10 @@
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
-#define MAX_ARRAY_SIZE 0
-#define MAX_PENDING_PAGE 8000
+#define MAX_ARRAY_SIZE 100000
+#define MAX_PENDING_PAGE 3000
+#define DEFAULT_HOT_SET_SIZE 1024
+#define MAX_HOT_SET_SIZE 8192
 
 #define DTLB_ENTRY 64
 #define HOT_SET_SIZE 10
@@ -80,13 +82,17 @@ struct hash_node {
 	unsigned long mfn;
 	unsigned long mem_counter;
 	unsigned long dtlb_miss;
-	unsigned long dtlb_load_miss;
-	unsigned long dtlb_store_miss;
 	unsigned long pf;
 	int track_time;
 	int sl1mfn;
+	int sl1mfn_pos;
 };
 
+struct hot_set_member { 
+	int sl1mfn_id;
+	int sl1mfn_pos_id;
+	unsigned long mfn;
+};
 struct pending_node {
 	unsigned long sl1mfn;
 	unsigned long va;
@@ -123,7 +129,6 @@ struct AET_ctrl {
 	unsigned long hash_conflict_num2;
 	/* add to pending set */
 	unsigned long set_num;
-	struct pending_node pds[MAX_PENDING_PAGE];
 	int sl1mfn_num;
 	int sl1mfn_start;
 	struct pending_node all_sl1mfn[MAX_PENDING_PAGE];
@@ -137,6 +142,14 @@ struct AET_ctrl {
 	unsigned long dtlb_miss_last;
 	unsigned long mem_now;
 	unsigned long mem_last;
+	unsigned long track_fault_time;
+	/* hot set related data structrue */
+	int hot_set_end; 
+	int hot_set_size;
+
+	int hot_set_time;
+	int hot_set_pos;
+	struct hot_set_member hot_set[MAX_HOT_SET_SIZE];
 };
 
 void aet_init(void);
@@ -178,9 +191,7 @@ void hc_set_debug_reg(unsigned long va, int cpu_id);
 void track_debug_reg(unsigned long va);
 
 /* The following function is used to add to pending set */
-void add_to_pending_page(unsigned long sl1mfn, unsigned long va);
 void add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va);
-void set_pending_page(void);
 void rand_track_page(void);
 
 /* The following function is used by iss16*/
