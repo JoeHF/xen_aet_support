@@ -28,11 +28,11 @@ def read_miss_curve_file(xaxis, yaxis, name):
 			if tot > 10:
 				if tot > miss_curve_x_limit:
 					break
-				xaxis.append(tot)
-				if (float(line) > 0.001):
-					print float(line)
-					yaxis.append(0.0)
-				else:	
+				if tot > 50:
+					xaxis.append(tot)
+					#if (float(line) > 0.005):
+					#	yaxis.append(0.0)
+					#else:	
 					yaxis.append(float(line))
 		odd = (odd + 1) % 2
 

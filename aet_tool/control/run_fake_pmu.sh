@@ -71,8 +71,16 @@ run_spec() {
 	kill $time_pid
 	echo "------------"
 	tmp="hi"
+	i=0
 	while [ -n "$tmp" ]
 	do
+		i=$(($i+1))
+		echo $i
+		if [ $i -gt 6 ] ; then 
+			ps -ef | grep xc | awk '{print $2}' | xargs kill -9
+			ps -ef | grep time_aet | awk '{print $2}' | xargs kill -9
+			break
+		fi
 		echo $tmp
 		echo "wait aet calculate end"
 		tmp=`ps -A | awk '{print $4}'  | grep -w xc`

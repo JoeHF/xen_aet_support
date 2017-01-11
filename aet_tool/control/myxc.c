@@ -151,6 +151,7 @@ static void aet_process(int dom, unsigned long n) {
         if (c % PGAP == 0) {
 			if ((c / PGAP) % 200 == 0) { 
 				printf("mem:%d finished %.10lf/%lu rate:%.10lf, dT now:%d\n", c / PGAP, sum - (double)first, tott - first, (sum - (double)first) / (double)(tott - first), dT);
+				printf("%.10lf\n", 1.0 * (N - sum) / N);
 			}
 
 			fprintf(mcf, "dT:%d sum:%.10lf\n", dT, sum);
