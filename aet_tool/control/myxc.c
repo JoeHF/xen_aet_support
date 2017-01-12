@@ -30,6 +30,7 @@ static void aet_process(int dom, unsigned long n) {
 
     unsigned long long m = aet_ctrl->node_count_[dom] * TRACK_RATE;
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
+	aet_ctrl->reset = 0;
 	if (tott == 0) { 
 		printf("tott is zero\n");
 		return;
@@ -71,6 +72,7 @@ static void aet_process(int dom, unsigned long n) {
 		n = n - aet_ctrl->mem_last;	
 	}
 
+	/*
 	unsigned long dtlb_miss = aet_ctrl->dtlb_miss_now - aet_ctrl->dtlb_miss_last;
 	aet_ctrl->dtlb_miss_last = aet_ctrl->dtlb_miss_now;
 
@@ -78,19 +80,21 @@ static void aet_process(int dom, unsigned long n) {
 	unsigned long surplus = (n - dtlb_miss) / TRACK_RATE;
 	aet_hist_[dom][1] += surplus;
 	tott += surplus;
+	*/
 
     //double N = tott + m;
     double N = tott + 1.0 * tott / (n-m) * m;
 	
 	printf("endless:%.10lf\n", 1.0 * tott / (n - m) * m / N);
 	printf("m:%lu\n", m);
-	printf("n:%lu dtlb miss:%lu\n", n, dtlb_miss);
+	//printf("n:%lu dtlb miss:%lu\n", n, dtlb_miss);
 	printf("origin first:%lu\n", first);
-	printf("tott:%lu without first:%lu\n", tott, tott - surplus);
+	//printf("tott:%lu without first:%lu\n", tott, tott - surplus);
+	printf("tott:%lu\n", tott);
 	printf("N:%.10lf\n", N);
 	printf("longest:%d\n", longest);
-	printf("surplus:%lu\n", surplus);
-	printf("rate:%.12lf\n", (double)surplus / (double)tott);
+	//printf("surplus:%lu\n", surplus);
+	//printf("rate:%.12lf\n", (double)surplus / (double)tott);
 
 	int domain = 256;
     double tot = 0.0;
@@ -117,10 +121,12 @@ static void aet_process(int dom, unsigned long n) {
 				break;
 			}
 
+			/*
 			if (dT >= longest) { 
 				printf("[INFO] dT:%d exceeds longest aet hist pos\n", dT);
 				break;
 			}
+			*/
 
 			/*
 			if ((sum - (double)surplus) / (double)(tott - surplus) > thresh_hold) { 
@@ -138,9 +144,11 @@ static void aet_process(int dom, unsigned long n) {
 			break;
 		}
 
+		/*
 		if (dT >= longest) { 
 			break;
 		}
+		*/
 
 		/*
 		if ((sum - (double)first) / (double)(tott - first) > thresh_hold) { 
@@ -182,7 +190,6 @@ void print(int arg) {
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict1:%llu hash conflict2:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num1, aet_ctrl->hash_conflict_num2, aet_ctrl->vmexit_num);
-		printf("valid sl1mfn:%lu \n", aet_ctrl->valid_sl1mfn[0]);
 	}
 	
 	if (arg == 1) {
@@ -245,7 +252,6 @@ void reset() {
 	aet_ctrl->hot_set_time = 0;
 	aet_ctrl->hot_set_pos = 0;
 	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
-	memset(aet_ctrl->valid_sl1mfn, 0, sizeof(aet_ctrl->valid_sl1mfn));
 	//memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));

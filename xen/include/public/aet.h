@@ -52,7 +52,7 @@ enum AET_TRACK_OPEN
 
 enum CMD_OP
 {
-	INVALID=0, PMU_CMD=1, AET_CMD=2,DEBUGREG_CMD=3
+	INVALID=0, PMU_CMD=1, AET_CMD=2,DEBUGREG_CMD=3,FULL_TRACK_CMD=4
 };
 
 struct page_reuse_time {
@@ -124,7 +124,6 @@ struct AET_ctrl {
 
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
-	unsigned long valid_sl1mfn[MAX_DOM_NR];
 	unsigned long hash_conflict_num1;
 	unsigned long hash_conflict_num2;
 	/* add to pending set */
@@ -150,6 +149,8 @@ struct AET_ctrl {
 	int hot_set_time;
 	int hot_set_pos;
 	struct hot_set_member hot_set[MAX_HOT_SET_SIZE];
+	/* reset aet hist and hot set*/
+	int reset;
 };
 
 void aet_init(void);

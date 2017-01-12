@@ -239,6 +239,7 @@ static void add_to_aet_histogram_pf(int domain_id, unsigned long old_pf, unsigne
 	}
 
 	compressed_dis = domain_value_to_index(new_pf - old_pf);	
+	add_user_mode_fault_count(11, 0, 0, new_pf - old_pf, compressed_dis);
 	//printk("real dis:%lu compressed_dis:%lu\n", new_mc - old_mc, compressed_dis);
 	if (compressed_dis >= MAX_PAGE_NUM) {
 		printk("[WARNING] compressed dis is larger than array size new_mc:%lu old_mc:%lu compressed_dis:%lu\n", new_pf, old_pf, compressed_dis);
@@ -358,8 +359,13 @@ static void track_specific_pte(int sl1mfn_id, int sl1mfn_pos_id) {
 
 static void add_to_hot_set(struct hot_set_member hsm) { 
 	struct hot_set_member *current_hsm = aet_ctrl->hot_set + aet_ctrl->hot_set_pos;
-	if (aet_ctrl->hot_set_time > aet_ctrl->hot_set_end)
+	if (aet_ctrl->hot_set_time >= aet_ctrl->hot_set_end) { 
+		if (aet_ctrl->hot_set_time == aet_ctrl->hot_set_end) { 
+			printk("hot set fill time is up to limit\n");
+			aet_ctrl->hot_set_time++;
+		}
 		return;
+	}
 
 	if (current_hsm->mfn != 0) { 
 		track_specific_pte(current_hsm->sl1mfn_id, current_hsm->sl1mfn_pos_id);
@@ -428,7 +434,7 @@ int track_aet_fault(int domain_id,
 		}
 
 		if (hn->mfn == 0) {
-			printk("[WARN] hash map mfn is not likely to be zero\n");
+			//printk("[WARN] hash map mfn is not likely to be zero\n");
 			return 0;
 		}
 	}
@@ -678,19 +684,27 @@ static int full_track_algorithm(int *hash_conflict) {
 void rand_track_page() { 
 	int count = 0;
 	int hash_conflict = 0;
-	if (aet_ctrl->sl1mfn_num == 0) { 
+
+	/*
+	if (aet_ctrl->sl1mfn_num < 100) { 
 		return;
 	}
+	*/	
 
-	aet_ctrl->valid_sl1mfn[0] = 0;
-	if (aet_ctrl->hot_set_time == 0) { 
-		aet_ctrl->set_sl1mfn_page_num++;	
+	if (aet_ctrl->reset == 0) { 
+		aet_ctrl->reset = 1;
 		memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 		memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
 		aet_ctrl->hot_set_pos = 0;
-		count = full_track_algorithm(&hash_conflict);
-		printk("%s count:%d set_sl1mfn_page_num:%lu\n", __func__, count, aet_ctrl->set_sl1mfn_page_num);
+		aet_ctrl->hot_set_time = 0;
 	}
+	else { 
+		return;
+	}
+
+	aet_ctrl->set_sl1mfn_page_num++;	
+	count = full_track_algorithm(&hash_conflict);
+	printk("%s count:%d set_sl1mfn_page_num:%lu\n", __func__, count, aet_ctrl->set_sl1mfn_page_num);
 }
 
 void add_vmexit_num(void) {
