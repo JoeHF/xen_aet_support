@@ -238,6 +238,8 @@ static void add_to_aet_histogram_pf(int domain_id, unsigned long old_pf, unsigne
 		return;
 	}
 
+	if (new_pf - old_pf < DEFAULT_HOT_SET_SIZE)
+		printk("[WARNING] the distance is less than default_hot_set_size\n");
 	compressed_dis = domain_value_to_index(new_pf - old_pf);	
 	add_user_mode_fault_count(11, 0, 0, new_pf - old_pf, compressed_dis);
 	//printk("real dis:%lu compressed_dis:%lu\n", new_mc - old_mc, compressed_dis);
@@ -615,9 +617,10 @@ static int full_track_algorithm(int *hash_conflict) {
 	int i, j, hash_pos;
 	unsigned long sl1mfn, va;
 	shadow_l1e_t *sp, *sl1e;
-	int counter = 0;
 	unsigned long mfn;
 	int is_hash_conflict;
+	int invalid_sl1mfn = 0;
+	int already_set = 0;
 	int key;
 	int count = 0;
 	struct hash_node *hn;
@@ -669,14 +672,17 @@ static int full_track_algorithm(int *hash_conflict) {
 					}
 				}
 				else { 
-					counter++;
-					continue;
+					already_set++;
 				}
 			}
 		}
+		else { 
+			invalid_sl1mfn++;
+		}
 	}
 
-	printk("%s count:%d fail:%d hash_conflict:%d\n", __func__, count, counter, *hash_conflict
+	printk("%s sl1mfn_num:%d invalid sl1mfn:%d already_set:%d\n", __func__, aet_ctrl->sl1mfn_num, invalid_sl1mfn, already_set);
+	printk("%s count:%d hash_conflict:%d\n", __func__, count, *hash_conflict
 );
 	return count;
 }
@@ -685,11 +691,12 @@ void rand_track_page() {
 	int count = 0;
 	int hash_conflict = 0;
 
-	/*
 	if (aet_ctrl->sl1mfn_num < 100) { 
 		return;
 	}
-	*/	
+		
+	if (aet_ctrl->reset == 0)
+		printk("reset:%d\n", aet_ctrl->reset);
 
 	if (aet_ctrl->reset == 0) { 
 		aet_ctrl->reset = 1;
@@ -758,7 +765,7 @@ void aet_init() {
 
     memset(aet_ctrl, 0, sizeof(aet_ctrl));
 	aet_ctrl->hot_set_size = DEFAULT_HOT_SET_SIZE;
-	aet_ctrl->hot_set_end = 100;
+	aet_ctrl->hot_set_end = 500;
 	randseed = (unsigned int) get_sec();
 	printk("[joe] aet_init end\n");
 }

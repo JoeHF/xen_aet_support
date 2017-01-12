@@ -9,8 +9,8 @@
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
-#define MAX_ARRAY_SIZE 100000
-#define MAX_PENDING_PAGE 3000
+#define MAX_ARRAY_SIZE 10000
+#define MAX_PENDING_PAGE 10000
 #define DEFAULT_HOT_SET_SIZE 1024
 #define MAX_HOT_SET_SIZE 8192
 
@@ -18,7 +18,7 @@
 #define HOT_SET_SIZE 10
 
 #define HASH 49997
-#define HASH_CONFLICT_NUM 3
+#define HASH_CONFLICT_NUM 10 
 
 #define DEBUG_DR6 0xffff0fff
 #define DEBUG_DR7 0xbbbb07ff

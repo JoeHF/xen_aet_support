@@ -32,7 +32,7 @@ static void aet_process(int dom, unsigned long n) {
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
 	aet_ctrl->reset = 0;
 	if (tott == 0) { 
-		printf("tott is zero\n");
+		printf("tott is zero reset:%d sl1mfn_num:%d\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num);
 		return;
 	}
     unsigned long long T = 0;

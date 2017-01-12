@@ -16,7 +16,7 @@ from email.mime.image import MIMEImage
 from email.header import Header
 
 aet_file_x_limit = 10000
-miss_curve_x_limit = 20
+miss_curve_x_limit = 2000
 
 def read_miss_curve_file(xaxis, yaxis, name):
 	fo = open(name)
