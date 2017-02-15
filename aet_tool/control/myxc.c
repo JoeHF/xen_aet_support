@@ -217,8 +217,15 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	unsigned  long diff;
 	diff = (end.tv_sec-start.tv_sec);
 	printf("aet run time:%lus aet_time:%d\n", diff, aet_time);
-	if (aet_time % 6 == 0 && aet_ctrl->reset != 3) { 
+	/*
+	if (aet_time % 1 == 0 && aet_ctrl->reset != 3) { 
 		printf("reset:%d!!!\n", aet_ctrl->reset);
+		aet_ctrl->reset = 0;
+	}
+	*/
+
+	// force reset if running enough time
+	if (aet_time % 10 == 0) { 
 		aet_ctrl->reset = 0;
 	}
 }
