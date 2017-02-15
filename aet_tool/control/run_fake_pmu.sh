@@ -92,6 +92,7 @@ run_spec() {
 		mkdir -p ./temp/$benchmark
 	fi
 	mv 148* ./temp/$benchmark
+	python cmp_wss.py $benchmark
 	python test.py $benchmark
 }
 

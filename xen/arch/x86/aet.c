@@ -14,10 +14,14 @@
 
 static struct AET_ctrl *aet_ctrl;
 static unsigned int randseed;
-static char* AET_CMD_NAME[3] = {"NO_OP", "SET_OPEN", "SET_TRACK"};
+static char* AET_CMD_NAME[4] = {"NO_OP", "SET_OPEN", "SET_TRACK", "SET_HOT_SIZE"};
 static char* TRACK_NAME[3] = {"L1_TRACK", "L4_TRACK", "PAGE_FAULT_COUNT"};
 static char* OPEN_NAME[2] = {"CLOSED", "OPEN"};
 
+static int add_to_hist(int pos); 
+static void add_to_lru_list_head(struct lru_node* ln); 
+static struct lru_node* find_lru_node(unsigned long mfn, int *pos); 
+static struct lru_node* add_lru_node(unsigned long mfn); 
 void set_aet_start(unsigned long sl4mfn) {
 	aet_ctrl->start_ = 1;
 	aet_ctrl->sl4mfn_ = sl4mfn;
@@ -232,17 +236,15 @@ static void add_to_aet_histogram(int domain_id, unsigned long old_mc, unsigned l
 
 static void add_to_aet_histogram_pf(int domain_id, unsigned long old_pf, unsigned long new_pf) {
 	unsigned long compressed_dis;
-//	printk("%s\n", __func__);
-	if (old_pf >= new_pf) {
-		printk("[WARNING] old mem counter is larger than the new mem counter\n");
+	if (new_pf <= old_pf) { 
+		printk("new pf:%lu less than old pf:%lu\n", old_pf, new_pf);
 		return;
 	}
 
-	if (new_pf - old_pf < DEFAULT_HOT_SET_SIZE)
-		printk("[WARNING] the distance is less than default_hot_set_size\n");
+	if (new_pf - old_pf < aet_ctrl->hot_set_size)
+		printk("[WARNING] the distance is less than hot set size:%d\n", aet_ctrl->hot_set_size);
 	compressed_dis = domain_value_to_index(new_pf - old_pf);	
 	add_user_mode_fault_count(11, 0, 0, new_pf - old_pf, compressed_dis);
-	//printk("real dis:%lu compressed_dis:%lu\n", new_mc - old_mc, compressed_dis);
 	if (compressed_dis >= MAX_PAGE_NUM) {
 		printk("[WARNING] compressed dis is larger than array size new_mc:%lu old_mc:%lu compressed_dis:%lu\n", new_pf, old_pf, compressed_dis);
 		return;
@@ -359,24 +361,53 @@ static void track_specific_pte(int sl1mfn_id, int sl1mfn_pos_id) {
 	}
 }
 
-static void add_to_hot_set(struct hot_set_member hsm) { 
+static void lru_func(unsigned long mfn, int add_to_hist_) { 
+	int pos;
+	struct lru_node* new_node = find_lru_node(mfn, &pos);
+//	printk("%s begin\n", __func__);
+	if (new_node == NULL) {
+		new_node = add_lru_node(mfn);
+		add_user_mode_fault_count(13, 0, 0, mfn, 0);
+		if (new_node == NULL) {
+			printk("[ERROR] add lru node fail\n");
+		}
+	}
+	else {
+		add_user_mode_fault_count(14, 0, 0, mfn, pos);
+		if (add_to_hist_) { 
+			//printk("%s add to hist pos:%d\n", __func__, pos);
+			add_to_hist(pos);
+		}
+	}
+
+	if (new_node != NULL)
+		add_to_lru_list_head(new_node);
+}
+
+static unsigned long add_to_hot_set(struct hot_set_member *hsm) { 
 	struct hot_set_member *current_hsm = aet_ctrl->hot_set + aet_ctrl->hot_set_pos;
-	if (aet_ctrl->hot_set_time >= aet_ctrl->hot_set_end) { 
+	unsigned long pop_mfn = 0;
+//	printk("%s begin\n", __func__);
+	aet_ctrl->add_to_hot_set_time++;
+	if (aet_ctrl->hot_set_end != 0 && aet_ctrl->hot_set_time >= aet_ctrl->hot_set_end) { 
 		if (aet_ctrl->hot_set_time == aet_ctrl->hot_set_end) { 
 			printk("hot set fill time is up to limit\n");
 			aet_ctrl->hot_set_time++;
 		}
-		return;
+		return pop_mfn;
 	}
 
 	if (current_hsm->mfn != 0) { 
+		/* for lru compare */
+		//lru_func(current_hsm->mfn, 0);
 		track_specific_pte(current_hsm->sl1mfn_id, current_hsm->sl1mfn_pos_id);
-		add_set_aet_magic_count(10, 0, 0, 0, current_hsm->mfn);
+		add_set_aet_magic_count(10, 0, 0, current_hsm->mfn, current_hsm->mfn);
+		pop_mfn = current_hsm->mfn;
 	}
 
-	current_hsm->mfn = hsm.mfn;
-	current_hsm->sl1mfn_id = hsm.sl1mfn_id;
-	current_hsm->sl1mfn_pos_id = hsm.sl1mfn_pos_id;
+	current_hsm->mfn = hsm->mfn;
+	current_hsm->sl1mfn_id = hsm->sl1mfn_id;
+	current_hsm->sl1mfn_pos_id = hsm->sl1mfn_pos_id;
 	if (aet_ctrl->hot_set_size == 0) { 
 		aet_ctrl->hot_set_size = DEFAULT_HOT_SET_SIZE;
 		printk("hot set size if zero!!!!!!!!!! set to default:%d\n", aet_ctrl->hot_set_size);
@@ -386,6 +417,43 @@ static void add_to_hot_set(struct hot_set_member hsm) {
 	if (aet_ctrl->hot_set_pos == 0) { 
 		aet_ctrl->hot_set_time++;
 	}
+
+	return pop_mfn;
+}
+
+static struct hash_node* find_in_hash_set(int domain_id, unsigned long mfn, struct hot_set_member *hsm) { 
+	int key;
+	int hash_pos;
+	struct hash_node *hn;
+//	printk("%s begin\n", __func__);
+	key = mfn % HASH;
+	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
+		hn = aet_ctrl->hns_[domain_id - 1][key] + hash_pos;
+		if (hn->mfn == mfn) { 
+			hsm->sl1mfn_id = hn->sl1mfn;
+			hsm->sl1mfn_pos_id = hn->sl1mfn_pos;
+			hsm->mfn = mfn;
+			return hn;
+		}
+	}
+
+	hn = NULL;
+	hsm = NULL;
+	printk("[WARN] track aet fault can not find hash conflict because it is already check in rand track page\n");
+	aet_ctrl->hash_conflict_num2++;
+	return hn;
+}
+static void aet_func(int domain_id, struct hash_node *hn) { 
+//	printk("%s begin\n", __func__);
+	if (hn->track_time > 0) { 
+		add_to_aet_histogram_pf(domain_id, hn->pf, aet_ctrl->track_fault_time);
+		add_user_mode_fault_count(15, hn->mfn, 0, hn->pf, aet_ctrl->track_fault_time);	
+	}
+
+	hn->pf = aet_ctrl->track_fault_time;
+	//hn->mem_counter = mem_counter;
+	//hn->dtlb_miss = dtlb_miss;
+	hn->track_time++;
 }
 
 int track_aet_fault(int domain_id, 
@@ -394,55 +462,32 @@ int track_aet_fault(int domain_id,
 					 unsigned long dtlb_load_miss,
 					 unsigned long dtlb_store_miss,
 					 unsigned long sl1mfn) {
-	int key;
-	int hash_pos = 0;
 	unsigned long dtlb_miss;
 	struct hash_node *hn;
 	struct hot_set_member hsm;
-	key = mfn % HASH;
+	unsigned long pop_mfn;
+//	printk("%s begin\n", __func__);
 	dtlb_miss = dtlb_load_miss + dtlb_store_miss;
 	aet_ctrl->mem_now = mem_counter;
 	aet_ctrl->dtlb_miss_now = dtlb_miss;
 	aet_ctrl->track_fault_time++;
-	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-		hn = aet_ctrl->hns_[domain_id - 1][key] + hash_pos;
-		if (hn->mfn == mfn) {
-			/*
-			 * add to hot set
-			 * if hot set is full
-			 * pop one from top and track that page
-			 */ 
-			hsm.sl1mfn_id = hn->sl1mfn;
-			hsm.sl1mfn_pos_id = hn->sl1mfn_pos;
-			hsm.mfn = mfn;
-			add_to_hot_set(hsm);
 
-			if (hn->track_time > 0) { 
-				add_to_aet_histogram_pf(domain_id, hn->pf, aet_ctrl->track_fault_time);
-				add_user_mode_fault_count(15, mfn, 0, hn->pf, aet_ctrl->track_fault_time);	
-			}
-
-			hn->pf = aet_ctrl->track_fault_time;
-			hn->mem_counter = mem_counter;
-			hn->dtlb_miss = dtlb_miss;
-			hn->track_time++;
-
-			add_user_mode_fault_count(13, 0, 0, hn->mfn, hn->pf); // for debug	
-			add_user_mode_fault_count(13, 0, 0, hn->mfn, hn->track_time); // for debug
-			if (hn->track_time > 1)
-				return 0;
-			else
-				return 0;
-		}
-
-		if (hn->mfn == 0) {
-			//printk("[WARN] hash map mfn is not likely to be zero\n");
-			return 0;
-		}
+	/* find in hash set*/
+	hn = find_in_hash_set(domain_id, mfn, &hsm);
+	
+	if (hn != NULL && hsm.mfn != 0) { 
+		/*
+		 * add to hot set
+		 * if hot set is full
+		 * pop one from top and track that page
+		 */
+		pop_mfn = add_to_hot_set(&hsm);
+		/* aet function*/
+		aet_func(domain_id, hn);	
+		/* lru function*/
+		lru_func(hn->mfn, 1);
 	}
-
-	//printk("[WARN] track aet fault can not find hash conflict because it is already check in rand track page\n");
-	aet_ctrl->hash_conflict_num2++;
+	
 	return 0;
 }
 
@@ -626,6 +671,7 @@ static int full_track_algorithm(int *hash_conflict) {
 	struct hash_node *hn;
 	unsigned long user_bit = 0x4;
 	unsigned long access_bit = 0x20;
+	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
 		sl1mfn = aet_ctrl->all_sl1mfn[i].sl1mfn;
 		va = aet_ctrl->all_sl1mfn[i].va;
@@ -672,7 +718,31 @@ static int full_track_algorithm(int *hash_conflict) {
 					}
 				}
 				else { 
-					already_set++;
+					if ((sl1e->l1 & SH_L1E_AET_MAGIC) != 0) {
+						already_set++;
+						mfn = ((sl1e->l1 ^ 0x8000000000000ULL) & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
+						//printk("sl1e->l1:%lx mfn:%lx\n", sl1e->l1, mfn);
+						key = mfn % HASH;
+						is_hash_conflict = 1;
+						for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
+							hn = aet_ctrl->hns_[0][key] + hash_pos;
+							if (hn->mfn == 0) { 
+								hn->mfn = mfn;
+								hn->sl1mfn = i;
+								hn->sl1mfn_pos = j;
+								hn->track_time = 0;
+								is_hash_conflict = 0;
+								break;
+							}
+							else if (hn->mfn == mfn) { 
+								hn->sl1mfn = i;
+								hn->sl1mfn_pos = j;
+								hn->track_time = 0;
+								is_hash_conflict = 0;
+								break;
+							}
+						}
+					}
 				}
 			}
 		}
@@ -681,6 +751,12 @@ static int full_track_algorithm(int *hash_conflict) {
 		}
 	}
 
+	aet_ctrl->last_set_num = count;
+	if (count == DEFAULT_HOT_SET_SIZE) { 
+		aet_ctrl->reset = 3;
+		printk("set reset 3\n");
+	}
+	flush_tlb_local();
 	printk("%s sl1mfn_num:%d invalid sl1mfn:%d already_set:%d\n", __func__, aet_ctrl->sl1mfn_num, invalid_sl1mfn, already_set);
 	printk("%s count:%d hash_conflict:%d\n", __func__, count, *hash_conflict
 );
@@ -690,32 +766,115 @@ static int full_track_algorithm(int *hash_conflict) {
 void rand_track_page() { 
 	int count = 0;
 	int hash_conflict = 0;
+	int hot_set_time = aet_ctrl->hot_set_time;
 
 	if (aet_ctrl->sl1mfn_num < 100) { 
+		aet_ctrl->reset = 1;
 		return;
 	}
 		
-	if (aet_ctrl->reset == 0)
-		printk("reset:%d\n", aet_ctrl->reset);
-
 	if (aet_ctrl->reset == 0) { 
-		aet_ctrl->reset = 1;
-		memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
-		memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
-		aet_ctrl->hot_set_pos = 0;
-		aet_ctrl->hot_set_time = 0;
+		printk("--------\n");
+		printk("reset:%d hot_set_time:%d track_time:%lu add_to_hot_set_time:%d\n", aet_ctrl->reset, aet_ctrl->hot_set_time, aet_ctrl->track_fault_time, aet_ctrl->add_to_hot_set_time);
 	}
-	else { 
+	else
+		return;
+
+	
+	/*
+	if (aet_ctrl->hot_set_time > 5) { 
+		aet_ctrl->reset = 1;
+		return;
+	}
+	*/
+
+	// for debug fake
+	/*
+	if (aet_ctrl->last_set_num > 3000) { 
+		printk("last set num:%d\n", aet_ctrl->last_set_num);
+		aet_ctrl->reset = 1;
+		return;
+	}
+	*/
+
+	aet_ctrl->reset = 2;
+	//memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
+	if (aet_ctrl->hot_set_end != 0 && aet_ctrl->hot_set_time > aet_ctrl->hot_set_end) { 
+		printk("reach hot set end not track anymore\n");
 		return;
 	}
 
+	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
+	aet_ctrl->hot_set_pos = 0;
+	//aet_ctrl->hot_set_time = 0;
+	aet_ctrl->add_to_hot_set_time = 0;
+
+	//clear lru list
+	aet_ctrl->lru_list_pos = 0;
+	aet_ctrl->lru_head_pointer->next = NULL; 
+
 	aet_ctrl->set_sl1mfn_page_num++;	
 	count = full_track_algorithm(&hash_conflict);
+	add_set_aet_magic_count(16, 0, 0, 0, hot_set_time);
 	printk("%s count:%d set_sl1mfn_page_num:%lu\n", __func__, count, aet_ctrl->set_sl1mfn_page_num);
 }
 
 void add_vmexit_num(void) {
 	aet_ctrl->vmexit_num++;
+}
+
+/* lru related function */
+static int add_to_hist(int pos) {
+    if (pos < LRU_MAX_PAGE_NUM) {
+        aet_ctrl->lru_hist_[pos]++;
+        return 0;
+    }
+
+    printk("pos:%d exceeds the maximum\n", pos);
+    return 1;
+}
+
+static void add_to_lru_list_head(struct lru_node* ln) {
+    if (ln->next != NULL)
+        ln->next->last = ln->last;
+    if (ln->last != NULL) 
+        ln->last->next = ln->next;
+
+    if (aet_ctrl->lru_head_pointer->next != NULL)
+        aet_ctrl->lru_head_pointer->next->last = ln;
+    ln->next = aet_ctrl->lru_head_pointer->next;
+    aet_ctrl->lru_head_pointer->next = ln;
+    ln->last = aet_ctrl->lru_head_pointer;
+}
+
+static struct lru_node* find_lru_node(unsigned long mfn, int *pos) {
+    struct lru_node* ln = aet_ctrl->lru_head_pointer->next;
+    *pos = 0;
+    while (ln != NULL) {
+        (*pos)++;
+        if (ln->mfn == mfn) {
+            return ln;
+        }
+
+        ln = ln->next;
+    }
+
+    return NULL;
+}
+
+static struct lru_node* add_lru_node(unsigned long mfn) {
+    if (aet_ctrl->lru_list_pos < LRU_MAX_PAGE_NUM) {
+        struct lru_node* new_node;
+        new_node = &aet_ctrl->lru_list[aet_ctrl->lru_list_pos];
+        new_node->mfn = mfn;
+        new_node->last = NULL;
+        new_node->next = NULL;
+        aet_ctrl->lru_list_pos++;
+        return new_node;
+    }
+
+	printk("exceeds maximum pos:%d\n", aet_ctrl->lru_list_pos);
+    return NULL;
 }
 
 unsigned long alloc_shared_memory(unsigned long size, unsigned long va)
@@ -765,9 +924,20 @@ void aet_init() {
 
     memset(aet_ctrl, 0, sizeof(aet_ctrl));
 	aet_ctrl->hot_set_size = DEFAULT_HOT_SET_SIZE;
-	aet_ctrl->hot_set_end = 500;
+	aet_ctrl->hot_set_end = HOT_SET_END;
+	aet_ctrl->lru_head.mfn = 0;
+
+	aet_ctrl->lru_head_pointer = &(aet_ctrl->lru_head);
+	aet_ctrl->lru_head_pointer->last = NULL;
+	aet_ctrl->lru_head_pointer->next = NULL;
+
 	randseed = (unsigned int) get_sec();
-	printk("[joe] aet_init end\n");
+	aet_ctrl->lru_list = (struct lru_node*)LRU_LIST_VIRT_START;
+	aet_ctrl->lru_length = LRU_MAX_PAGE_NUM;
+
+	aet_ctrl->lru_node_page_nr = alloc_shared_memory((aet_ctrl->lru_length + 1) * (sizeof(struct lru_node)), LRU_LIST_VIRT_START);
+	memset(aet_ctrl->lru_list, 0, aet_ctrl->lru_node_page_nr << PAGE_SHIFT);
+	printk("[joe] aet_init end lru_node_page_nr:%lu\n", aet_ctrl->lru_node_page_nr);
 }
 
 
@@ -785,6 +955,10 @@ void set_aet_cmd(enum AET_CMD_OP aet_cmd, unsigned long arg1, unsigned long arg2
 			printk("set track way :%s\n", TRACK_NAME[arg1]);
 			set_track(arg1);
 			break;
+		case SET_HOT_SET_SIZE:
+			printk("modify hot set size:%lu\n", arg1);
+			aet_ctrl->hot_set_size = arg1;
+			break;	
 		default:
 			printk("invalid aet cmd\n");
 	}

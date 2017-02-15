@@ -35,7 +35,7 @@ output = output.split()
 for pic in output:
 	if ".png" in pic:
 		#创建一个带附件的实例
-		print pic
+		#print pic
 		part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  
 		part.add_header('Content-Disposition', 'attachment', filename=pic)  
 		message.attach(part)  

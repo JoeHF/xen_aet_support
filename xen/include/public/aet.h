@@ -1,7 +1,9 @@
 #ifndef _PUBLIC_AET_H
 #define _PUBLIC_AET_H
 #define SHARED_DATA_PML4 270
+#define LRU_LIST_VIRT_PML4 271
 #define SHARED_DATA_START (PML4_ADDR(270))
+#define LRU_LIST_VIRT_START     (PML4_ADDR(271))
 
 #define TRACK_DISTANCE 10
 #define CONSECUTIVE_SET_PAGE 2
@@ -9,9 +11,10 @@
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
-#define MAX_ARRAY_SIZE 10000
+#define MAX_ARRAY_SIZE 100000
 #define MAX_PENDING_PAGE 10000
-#define DEFAULT_HOT_SET_SIZE 1024
+#define HOT_SET_END 100000 
+#define DEFAULT_HOT_SET_SIZE 1024 
 #define MAX_HOT_SET_SIZE 8192
 
 #define DTLB_ENTRY 64
@@ -19,6 +22,8 @@
 
 #define HASH 49997
 #define HASH_CONFLICT_NUM 10 
+
+#define LRU_MAX_PAGE_NUM 520000
 
 #define DEBUG_DR6 0xffff0fff
 #define DEBUG_DR7 0xbbbb07ff
@@ -37,7 +42,7 @@
 
 enum AET_CMD_OP
 {
-	NO_OP=0, SET_OPEN, SET_TRACK
+	NO_OP=0, SET_OPEN, SET_TRACK, SET_HOT_SET_SIZE
 };
 
 enum TRACK 
@@ -99,6 +104,15 @@ struct pending_node {
 	int track_num;
 };
 
+struct lru_node { 
+	unsigned long mfn;
+	int track_time;
+	int sl1mfn;
+	int sl1mfn_pos;
+	struct lru_node *next;
+	struct lru_node *last;
+};
+
 struct AET_ctrl {
 	int start_;
 	enum AET_TRACK_OPEN open_;
@@ -142,6 +156,8 @@ struct AET_ctrl {
 	unsigned long mem_now;
 	unsigned long mem_last;
 	unsigned long track_fault_time;
+	/* for debug*/
+	int last_set_num;
 	/* hot set related data structrue */
 	int hot_set_end; 
 	int hot_set_size;
@@ -149,8 +165,18 @@ struct AET_ctrl {
 	int hot_set_time;
 	int hot_set_pos;
 	struct hot_set_member hot_set[MAX_HOT_SET_SIZE];
+	int add_to_hot_set_time;
 	/* reset aet hist and hot set*/
 	int reset;
+	/* lru related structrue */
+	struct lru_node lru_head;
+	struct lru_node *lru_head_pointer;
+	struct lru_node *lru_list;
+	unsigned long lru_node_page_nr;
+	unsigned long lru_hist_[LRU_MAX_PAGE_NUM];
+	int endless;
+	int lru_length;
+	int lru_list_pos;
 };
 
 void aet_init(void);

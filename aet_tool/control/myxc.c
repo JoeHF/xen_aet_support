@@ -21,36 +21,71 @@ int limit = 2000;
 static struct AET_ctrl *aet_ctrl = (struct AET_ctrl *)PML4_ADDR(270ul);
 static char* NAME[10] = {"SET", "REVERSED", "USER_MODE", "TLB_COUNTER", "MEM_COUNTER", "DIFF"};
 
+struct timeval start;
+struct timezone tz;
+struct timeval end;
+
 //#ifdef AET_PF
-static void aet_process(int dom, unsigned long n) {
-	struct timeval start;
-	struct timezone tz;
-	struct timeval end;
+static void lru_process(unsigned long lru_hist_[]) { 
+	double total = 0;
+	FILE *lru_mcf;
+	char lru_miss_curve_name[20];
+	for (int i = 0 ; i < LRU_MAX_PAGE_NUM ; i++) 
+		total += (double)lru_hist_[i];
+	sprintf(lru_miss_curve_name, "%d_lru_mc.txt", start.tv_sec);
+	lru_mcf = fopen(lru_miss_curve_name, "w");
+
+	double sum = 0.0;
+	int m = limit * 256;
+	for (int i = 0 ; i < m ; i++) { 
+		sum += (double)lru_hist_[i];
+		fprintf(lru_mcf, "%.10lf\n", 1.0 - sum / total);
+	}
+
+	fclose(lru_mcf);
+}
+
+static void aet_process(int dom, unsigned long n, int aet_time) {
 	gettimeofday(&start, &tz);
 
     unsigned long long m = aet_ctrl->node_count_[dom] * TRACK_RATE;
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
-	aet_ctrl->reset = 0;
-	if (tott == 0) { 
-		printf("tott is zero reset:%d sl1mfn_num:%d\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num);
+	if (aet_ctrl->reset == 1)
+		aet_ctrl->reset = 0;
+	
+	if (aet_time >= 60) { 
+		aet_ctrl->hot_set_time = HOT_SET_END + 1;
+		printf("cal aet time 60 times exits! tott:%d\n", tott);
+		return;
+	}
+
+	if (tott < 1000) { 
+		aet_ctrl->reset = 0;
+		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num);
 		return;
 	}
     unsigned long long T = 0;
 	unsigned long first = aet_ctrl->aet_hist_[dom][1];
 	int longest = aet_ctrl->longest_aet_hist_pos[dom];
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];
+	unsigned long lru_hist_[LRU_MAX_PAGE_NUM];
 	memcpy(aet_hist_, aet_ctrl->aet_hist_, sizeof(aet_ctrl->aet_hist_));
+	memcpy(lru_hist_, aet_ctrl->lru_hist_, sizeof(aet_ctrl->lru_hist_));
 	//clear
 	aet_ctrl->tot_ref_[dom] = 0;
 	aet_ctrl->longest_aet_hist_pos[dom] = 0;
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
+	memset(aet_ctrl->lru_hist_, 0, sizeof(aet_ctrl->lru_hist_));
 
     
 	char miss_curve_file_name[30];
 	char aet_hist_file_name[30];
-	FILE *mcf, *aef;
+	char lru_hist_file_name[30];
+	FILE *mcf, *aef, *lruf;
 	sprintf(aet_hist_file_name, "%d_aet_hist.txt", start.tv_sec);
+	sprintf(lru_hist_file_name, "%d_lru_hist.txt", start.tv_sec);
 	aef = fopen(aet_hist_file_name, "w");
+	lruf = fopen(lru_hist_file_name, "w");
     if (n != 0) { 
 		mcf	= fopen("miss_curve.txt","w");
 		printf("old miss curve file name\n");
@@ -58,11 +93,16 @@ static void aet_process(int dom, unsigned long n) {
 	else { 
 		sprintf(miss_curve_file_name, "%d_miss_curve.txt", start.tv_sec);
 		mcf = fopen(miss_curve_file_name, "w");
-		printf("miss curve file name:%s\n", miss_curve_file_name);
+		//printf("miss curve file name:%s\n", miss_curve_file_name);
 	}
 
-	for (int i = 0 ; i < MAX_PAGE_NUM ; i++)
+	for (int i = 0 ; i < MAX_PAGE_NUM ; i++) { 
 		fprintf(aef, "%lu\n", aet_hist_[dom][i]);
+	}
+
+	for (int i = 0 ; i < LRU_MAX_PAGE_NUM ; i++) { 
+		fprintf(lruf, "%lu\n", lru_hist_[i]);
+	}
 
 	if (n == 0) { 
 		n = aet_ctrl->mem_now - aet_ctrl->mem_last;
@@ -85,16 +125,15 @@ static void aet_process(int dom, unsigned long n) {
     //double N = tott + m;
     double N = tott + 1.0 * tott / (n-m) * m;
 	
-	printf("endless:%.10lf\n", 1.0 * tott / (n - m) * m / N);
-	printf("m:%lu\n", m);
+	//printf("endless:%.10lf\n", 1.0 * tott / (n - m) * m / N);
+	//printf("m:%lu\n", m);
 	//printf("n:%lu dtlb miss:%lu\n", n, dtlb_miss);
-	printf("origin first:%lu\n", first);
-	//printf("tott:%lu without first:%lu\n", tott, tott - surplus);
-	printf("tott:%lu\n", tott);
-	printf("N:%.10lf\n", N);
-	printf("longest:%d\n", longest);
-	//printf("surplus:%lu\n", surplus);
-	//printf("rate:%.12lf\n", (double)surplus / (double)tott);
+	//printf("origin first:%lu\n", first);
+	printf("lru lru_list_pos:%d\n", aet_ctrl->lru_list_pos);
+	lru_process(lru_hist_);
+	printf("tott:%lu hot set time:%d\n", tott, aet_ctrl->hot_set_time);
+	//printf("N:%.10lf\n", N);
+	//printf("longest:%d\n", longest);
 
 	int domain = 256;
     double tot = 0.0;
@@ -158,8 +197,8 @@ static void aet_process(int dom, unsigned long n) {
 
         if (c % PGAP == 0) {
 			if ((c / PGAP) % 200 == 0) { 
-				printf("mem:%d finished %.10lf/%lu rate:%.10lf, dT now:%d\n", c / PGAP, sum - (double)first, tott - first, (sum - (double)first) / (double)(tott - first), dT);
-				printf("%.10lf\n", 1.0 * (N - sum) / N);
+				//printf("mem:%d finished %.10lf/%lu rate:%.10lf, dT now:%d\n", c / PGAP, sum - (double)first, tott - first, (sum - (double)first) / (double)(tott - first), dT);
+				//printf("%.10lf\n", 1.0 * (N - sum) / N);
 			}
 
 			fprintf(mcf, "dT:%d sum:%.10lf\n", dT, sum);
@@ -177,8 +216,11 @@ static void aet_process(int dom, unsigned long n) {
 	gettimeofday(&end, &tz);
 	unsigned  long diff;
 	diff = (end.tv_sec-start.tv_sec);
-	printf("aet run time:%lus\n", diff);
-	
+	printf("aet run time:%lus aet_time:%d\n", diff, aet_time);
+	if (aet_time % 6 == 0 && aet_ctrl->reset != 3) { 
+		printf("reset:%d!!!\n", aet_ctrl->reset);
+		aet_ctrl->reset = 0;
+	}
 }
 //#endif
 void print(int arg) {
@@ -251,6 +293,7 @@ void reset() {
 	aet_ctrl->dtlb_miss_last = 0;
 	aet_ctrl->hot_set_time = 0;
 	aet_ctrl->hot_set_pos = 0;
+	aet_ctrl->last_set_num = 0;
 	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
 	//memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
@@ -266,8 +309,9 @@ void reset() {
 int main(int argc, char** argv) {
 	int ch;
 	int do_aet = 0;
+	int aet_time = 0;
 	unsigned long n;
-	while ((ch = getopt(argc, argv, "s:rc:l:")) != -1) {
+	while ((ch = getopt(argc, argv, "s:rc:l:t:")) != -1) {
 		switch (ch) {
 			case 's':
 				printf("option s:%s\n", optarg);
@@ -278,14 +322,17 @@ int main(int argc, char** argv) {
 				printf("option r\n");
 				reset();
 				break;
+			case 't':
+				printf("option t:%s\n", optarg);
+				aet_time = atoi(optarg);
 			case 'c':
-				printf("option c:%s\n", optarg);
+				//printf("option c:%s\n", optarg);
 				do_aet = 1;
 				n = strtoul(optarg, NULL, 0);
 				break;
 			case 'l':
 				limit = atoi(optarg);
-				printf("option l limit:%d\n", limit);
+				//printf("option l limit:%d\n", limit);
 				break;
 			default:
 				break;
@@ -293,7 +340,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (do_aet) { 
-		aet_process(0, n);
+		aet_process(0, n, aet_time);
 	}
 
 	return 0;
