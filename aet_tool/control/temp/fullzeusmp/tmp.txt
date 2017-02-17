@@ -1,0 +1,21 @@
+0.01 error rate is:0.320896626702 noise:3 total:78
+0.02 error rate is:0.30316731997 noise:3 total:78
+0.03 error rate is:0.280584704098 noise:3 total:78
+0.04 error rate is:0.253308189308 noise:3 total:78
+0.05 error rate is:0.233618652977 noise:4 total:78
+0.06 error rate is:0.230420457787 noise:4 total:78
+0.07 error rate is:0.226085065807 noise:4 total:78
+0.08 error rate is:0.21537459287 noise:4 total:78
+0.09 error rate is:0.195937184594 noise:5 total:78
+0.1 error rate is:0.185214073333 noise:5 total:78
+0.11 error rate is:0.190976171279 noise:5 total:78
+0.12 error rate is:0.167976835088 noise:7 total:78
+0.13 error rate is:0.172665279985 noise:7 total:78
+0.14 error rate is:0.172635418906 noise:7 total:78
+0.15 error rate is:0.178077412351 noise:7 total:78
+0.16 error rate is:0.169660451248 noise:7 total:78
+0.17 error rate is:0.181590625752 noise:5 total:78
+0.18 error rate is:0.180806331884 noise:4 total:78
+0.19 error rate is:0.18039326263 noise:4 total:78
+0.2 error rate is:0.182029948942 noise:3 total:78
+average error rate is:0.211070930276

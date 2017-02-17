@@ -16,8 +16,16 @@ benchmark = sys.argv[1]
 shell_cmd = "ls ./temp/" + benchmark
 output = os.popen(shell_cmd)
 output = output.read()
-
 print "-------------"
+temp_file = open("./temp/" + benchmark + "/tmp.txt", "r")
+# 构造邮件正文内容
+content = 'all stage miss_curve graph {0}\n'.format(benchmark)
+for line in temp_file.readlines():
+	key = line.split(":")[0]
+	value = line.split(":")[1]
+	content += line
+
+temp_file.close()
 
 message = MIMEMultipart()
 message['From'] = Header("joe", 'utf-8')
@@ -26,14 +34,13 @@ subject = '{0} aet graph'.format(benchmark)
 message['Subject'] = Header(subject, 'utf-8')
 
 #邮件正文内容
-content = 'all stage miss_curve graph {0}'.format(benchmark)
 message.attach(MIMEText(content, 'plain', 'utf-8'))
 sender = 'from@runoob.com'
 receivers = ['707980114@qq.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
 
 output = output.split()
 for pic in output:
-	if ".png" in pic:
+	if ".png" in pic and "148" not in pic:
 		#创建一个带附件的实例
 		#print pic
 		part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  

@@ -1,0 +1,10 @@
+./test_smooth.sh fullastar
+./test_smooth.sh fullbzip2
+./test_smooth.sh fullbwaves
+./test_smooth.sh fullgcc
+./test_smooth.sh fullmcf
+./test_smooth.sh fullmilc
+./test_smooth.sh fullzeusmp
+./test_smooth.sh fullcactus
+./test_smooth.sh fullgems
+./test_smooth.sh fulllbm

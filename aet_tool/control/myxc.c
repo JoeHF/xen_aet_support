@@ -53,9 +53,9 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_ctrl->reset == 1)
 		aet_ctrl->reset = 0;
 	
-	if (aet_time >= 60) { 
+	if (aet_time >= 80) { 
 		aet_ctrl->hot_set_time = HOT_SET_END + 1;
-		printf("cal aet time 60 times exits! tott:%d\n", tott);
+		printf("cal aet time 80 times exits! tott:%d\n", tott);
 		return;
 	}
 
