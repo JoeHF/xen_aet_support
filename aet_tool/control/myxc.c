@@ -53,17 +53,21 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_ctrl->reset == 1)
 		aet_ctrl->reset = 0;
 	
+	
+	/*
 	if (aet_time >= 80) { 
 		aet_ctrl->hot_set_time = HOT_SET_END + 1;
 		printf("cal aet time 80 times exits! tott:%d\n", tott);
 		return;
 	}
+	*/
+	
 
-	if (tott < 1000) { 
-		aet_ctrl->reset = 0;
-		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num);
-		return;
-	}
+	//if (tott < 1000) { 
+		//aet_ctrl->reset = 0;
+		//printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num);
+		//return;
+	//}
     unsigned long long T = 0;
 	unsigned long first = aet_ctrl->aet_hist_[dom][1];
 	int longest = aet_ctrl->longest_aet_hist_pos[dom];
@@ -76,7 +80,18 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	aet_ctrl->longest_aet_hist_pos[dom] = 0;
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->lru_hist_, 0, sizeof(aet_ctrl->lru_hist_));
-
+	if (aet_ctrl->sleep == 0) { 
+		printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
+		aet_ctrl->sleep = 1;
+	}
+	else { 
+		// force reset if running enough time
+		if (aet_time % 4 == 0) { 
+			aet_ctrl->sleep = 0;
+			aet_ctrl->reset = 0;
+		}
+		return;
+	}
     
 	char miss_curve_file_name[30];
 	char aet_hist_file_name[30];
@@ -223,11 +238,6 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 		aet_ctrl->reset = 0;
 	}
 	*/
-
-	// force reset if running enough time
-	if (aet_time % 10 == 0) { 
-		aet_ctrl->reset = 0;
-	}
 }
 //#endif
 void print(int arg) {

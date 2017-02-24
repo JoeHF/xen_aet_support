@@ -4,17 +4,19 @@
 #define LRU_LIST_VIRT_PML4 271
 #define SHARED_DATA_START (PML4_ADDR(270))
 #define LRU_LIST_VIRT_START     (PML4_ADDR(271))
+/* some switchers*/
+#define LRU_FLAG 0
+#define SAMPLE_FLAG 0
 
-#define TRACK_DISTANCE 10
-#define CONSECUTIVE_SET_PAGE 2
-#define TRACK_RATE (512 / CONSECUTIVE_SET_PAGE * TRACK_DISTANCE)
+#define TRACK_RATE 4 
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
 #define MAX_ARRAY_SIZE 100000
 #define MAX_PENDING_PAGE 10000
-#define HOT_SET_END 100000 
-#define DEFAULT_HOT_SET_SIZE 1024 
+/*#define HOT_SET_END 100000 */
+#define HOT_SET_END 0 
+#define DEFAULT_HOT_SET_SIZE 2048 
 #define MAX_HOT_SET_SIZE 8192
 
 #define DTLB_ENTRY 64
@@ -168,6 +170,7 @@ struct AET_ctrl {
 	int add_to_hot_set_time;
 	/* reset aet hist and hot set*/
 	int reset;
+	int sleep;
 	/* lru related structrue */
 	struct lru_node lru_head;
 	struct lru_node *lru_head_pointer;

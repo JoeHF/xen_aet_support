@@ -6,7 +6,7 @@ echo ${map[$benchmark]}
 aet_time=0
 while [ 1 ]
 do
-	sleep 15
+	sleep 5
 	aet_time=$(($aet_time+1))
 	./xc -t $aet_time -c 0 -l ${map[$benchmark]} & 
 	#./xc -c 0 -l ${map[$benchmark]} & 
