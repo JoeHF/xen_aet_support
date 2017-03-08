@@ -5,7 +5,7 @@
 #define SHARED_DATA_START (PML4_ADDR(270))
 #define LRU_LIST_VIRT_START     (PML4_ADDR(271))
 /* some switchers*/
-#define LRU_FLAG 1
+#define LRU_FLAG 0
 #define SAMPLE_FLAG 0
 
 #define TRACK_RATE 4 
