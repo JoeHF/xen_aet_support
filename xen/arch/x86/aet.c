@@ -248,12 +248,12 @@ static void add_to_aet_histogram_pf(int domain_id, unsigned long old_pf, unsigne
 	}
 
 	//printk("cd:%lu longest:%d\n", compressed_dis, aet_ctrl->longest_aet_hist_pos[domain_id - 1]);
-	if (compressed_dis > aet_ctrl->longest_aet_hist_pos[domain_id - 1]) { 
-		aet_ctrl->longest_aet_hist_pos[domain_id - 1] = compressed_dis;
+	if (compressed_dis > aet_ctrl->longest_aet_hist_pos[domain_id]) { 
+		aet_ctrl->longest_aet_hist_pos[domain_id] = compressed_dis;
 	}
 
-	aet_ctrl->aet_hist_[domain_id - 1][compressed_dis]++;
-	aet_ctrl->tot_ref_[domain_id - 1]++;
+	aet_ctrl->aet_hist_[domain_id][compressed_dis]++;
+	aet_ctrl->tot_ref_[domain_id]++;
 }
 
 /*
@@ -365,6 +365,7 @@ static void lru_func(unsigned long mfn, int add_to_hist_) {
 	if (new_node == NULL) {
 		new_node = add_lru_node(mfn);
 		add_user_mode_fault_count(13, 0, 0, mfn, 0);
+		aet_ctrl->lru_cold_miss_[current->domain->domain_id]++;
 		if (new_node == NULL) {
 			printk("[ERROR] add lru node fail\n");
 		}
@@ -385,6 +386,7 @@ static void lru_func(unsigned long mfn, int add_to_hist_) {
 static unsigned long add_to_hot_set(struct hot_set_member *hsm) { 
 	struct hot_set_member *current_hsm = aet_ctrl->hot_set + aet_ctrl->hot_set_pos;
 	unsigned long pop_mfn = 0;
+	aet_ctrl->add_to_hot_set_num++;
 //	printk("%s begin\n", __func__);
 	if (aet_ctrl->hot_set_end != 0 && aet_ctrl->hot_set_time >= aet_ctrl->hot_set_end) { 
 		if (aet_ctrl->hot_set_time == aet_ctrl->hot_set_end) { 
@@ -430,7 +432,7 @@ static struct hash_node* find_in_hash_set(int domain_id, unsigned long mfn, stru
 //	printk("%s begin\n", __func__);
 	key = mfn % HASH;
 	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-		hn = aet_ctrl->hns_[domain_id - 1][key] + hash_pos;
+		hn = aet_ctrl->hns_[domain_id][key] + hash_pos;
 		if (hn->mfn == mfn) { 
 			hsm->sl1mfn_id = hn->sl1mfn;
 			hsm->sl1mfn_pos_id = hn->sl1mfn_pos;
@@ -447,9 +449,13 @@ static struct hash_node* find_in_hash_set(int domain_id, unsigned long mfn, stru
 }
 static void aet_func(int domain_id, struct hash_node *hn) { 
 //	printk("%s begin\n", __func__);
+    aet_ctrl->aet_func_num++;
 	if (hn->track_time > 0) { 
 		add_to_aet_histogram_pf(domain_id, hn->pf, aet_ctrl->track_fault_time);
 		add_user_mode_fault_count(15, hn->mfn, 0, hn->pf, aet_ctrl->track_fault_time);	
+	}
+	else { 
+		aet_ctrl->cold_miss_[domain_id]++;
 	}
 
 	hn->pf = aet_ctrl->track_fault_time;
@@ -468,6 +474,8 @@ int track_aet_fault(int domain_id,
 	struct hash_node *hn;
 	struct hot_set_member hsm;
 	unsigned long pop_mfn;
+	unsigned long start = get_localtime_us(current->domain);
+	unsigned long end;
 //	printk("%s begin\n", __func__);
 	dtlb_miss = dtlb_load_miss + dtlb_store_miss;
 	aet_ctrl->mem_now = mem_counter;
@@ -475,7 +483,7 @@ int track_aet_fault(int domain_id,
 	aet_ctrl->track_fault_time++;
 
 	if (aet_ctrl->sleep == 1)
-		return 0;
+		goto out;
 	/* find in hash set*/
 	hn = find_in_hash_set(domain_id, mfn, &hsm);
 	
@@ -496,7 +504,10 @@ int track_aet_fault(int domain_id,
 	else { 
 		printk("[WARN] can not find in hash set\n");
 	}
-	
+
+out:	
+	end = get_localtime_us(current->domain);
+	aet_ctrl->track_aet_time += (end - start);
 	return 0;
 }
 
@@ -581,22 +592,28 @@ void track_debug_reg(unsigned long va) {
 void add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va) {
 	unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
 	int i;
+	unsigned long start = get_localtime_us(current->domain);
+	unsigned long end;
 	//printk("%s sl1mfn:%lx, va:%lx\n", __func__, sl1mfn, va);
 	// remove duplicate one
 	for (i = aet_ctrl->sl1mfn_num - 1 ; i >= 0 ; i--) {
 		if (aet_ctrl->all_sl1mfn[i].sl1mfn == sl1mfn)
-			return;
+			goto out;
 	}
 
 	if (aet_ctrl->sl1mfn_num >= MAX_PENDING_PAGE) {
 		printk("[joe]%s sl1mfn num exceed MAX_PENDING_PAGE_SIZE\n", __func__);
-		return;
+		goto out;
 	}
 
 	aet_ctrl->all_sl1mfn[aet_ctrl->sl1mfn_num].sl1mfn = sl1mfn;
 	aet_ctrl->all_sl1mfn[aet_ctrl->sl1mfn_num].va = va_start;
 	aet_ctrl->sl1mfn_num++;
-
+	
+out:
+	end = get_localtime_us(current->domain);
+	aet_ctrl->add_to_all_sl1mfn_time += (end - start);
+	return;
 }
 
 static unsigned int curl_rand(void) { 
@@ -623,6 +640,9 @@ static int rand_track_algorithm(int *hash_conflict) {
 	int counter = 0;
 	int rand_skip = 0;
 	int rand_chosen = 0;
+	int dom = current->domain->domain_id;
+	printk("domid:%d\n", dom);
+	dom = 1;
 
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
@@ -645,7 +665,7 @@ static int rand_track_algorithm(int *hash_conflict) {
 						key = mfn % HASH;
 						is_hash_conflict = 1;
 						for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-							hn = aet_ctrl->hns_[0][key] + hash_pos;
+							hn = aet_ctrl->hns_[dom][key] + hash_pos;
 							if (hn->mfn == 0) { 
 								hn->mfn = mfn;
 								hn->sl1mfn = i;
@@ -682,7 +702,7 @@ static int rand_track_algorithm(int *hash_conflict) {
 							key = mfn % HASH;
 							is_hash_conflict = 1;
 							for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-								hn = aet_ctrl->hns_[0][key] + hash_pos;
+								hn = aet_ctrl->hns_[dom][key] + hash_pos;
 								if (hn->mfn == 0) { 
 									hn->mfn = mfn;
 									hn->sl1mfn = i;
@@ -737,7 +757,11 @@ static int full_track_algorithm(int *hash_conflict) {
 	struct hash_node *hn;
 	unsigned long user_bit = 0x4;
 	unsigned long access_bit = 0x20;
+	int dom = current->domain->domain_id;
+	printk("domid:%d last_sl1mfn_num:%d\n", dom, aet_ctrl->last_sl1mfn_num);
+	dom = 1;
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
+	//for (i = aet_ctrl->last_sl1mfn_num ; i < aet_ctrl->sl1mfn_num ; i++) { 
 	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
 		sl1mfn = aet_ctrl->all_sl1mfn[i].sl1mfn;
 		va = aet_ctrl->all_sl1mfn[i].va;
@@ -754,7 +778,7 @@ static int full_track_algorithm(int *hash_conflict) {
 					key = mfn % HASH;
 					is_hash_conflict = 1;
 					for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-						hn = aet_ctrl->hns_[0][key] + hash_pos;
+						hn = aet_ctrl->hns_[dom][key] + hash_pos;
 						if (hn->mfn == 0) { 
 							hn->mfn = mfn;
 							hn->sl1mfn = i;
@@ -791,13 +815,14 @@ static int full_track_algorithm(int *hash_conflict) {
 						key = mfn % HASH;
 						is_hash_conflict = 1;
 						for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-							hn = aet_ctrl->hns_[0][key] + hash_pos;
+							hn = aet_ctrl->hns_[dom][key] + hash_pos;
 							if (hn->mfn == 0) { 
 								hn->mfn = mfn;
 								hn->sl1mfn = i;
 								hn->sl1mfn_pos = j;
 								hn->track_time = 0;
 								is_hash_conflict = 0;
+								printk("tracked not in hash\n");
 								break;
 							}
 							else if (hn->mfn == mfn) { 
@@ -807,6 +832,10 @@ static int full_track_algorithm(int *hash_conflict) {
 								is_hash_conflict = 0;
 								break;
 							}
+						}
+
+						if (is_hash_conflict) { 
+							(*hash_conflict)++;
 						}
 					}
 				}
@@ -818,6 +847,7 @@ static int full_track_algorithm(int *hash_conflict) {
 	}
 
 	aet_ctrl->last_set_num = count;
+	aet_ctrl->last_sl1mfn_num = aet_ctrl->sl1mfn_num + 1;
 	if (count == DEFAULT_HOT_SET_SIZE) { 
 		aet_ctrl->reset = 3;
 		printk("set reset 3\n");
@@ -873,6 +903,8 @@ void rand_track_page() {
 	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
 	aet_ctrl->hot_set_pos = 0;
 	aet_ctrl->hot_set_time = 0;
+	aet_ctrl->aet_func_num = 0;
+	aet_ctrl->add_to_hot_set_num = 0;
 	aet_ctrl->add_to_hot_set_time = 0;
 
 	//clear lru list
@@ -1007,6 +1039,7 @@ void aet_init() {
 	aet_ctrl->lru_node_page_nr = alloc_shared_memory((aet_ctrl->lru_length + 1) * (sizeof(struct lru_node)), LRU_LIST_VIRT_START);
 	memset(aet_ctrl->lru_list, 0, aet_ctrl->lru_node_page_nr << PAGE_SHIFT);
 	aet_ctrl->sleep = 0;
+	aet_ctrl->add_to_all_sl1mfn_time = 0;
 	printk("[joe] aet_init end lru_node_page_nr:%lu\n", aet_ctrl->lru_node_page_nr);
 }
 

@@ -26,12 +26,14 @@ struct timezone tz;
 struct timeval end;
 
 //#ifdef AET_PF
-static void lru_process(unsigned long lru_hist_[]) { 
+static void lru_process(unsigned long lru_hist_[], unsigned long cold_miss) { 
 	double total = 0;
 	FILE *lru_mcf;
 	char lru_miss_curve_name[20];
+	total += (double)cold_miss; 
 	for (int i = 0 ; i < LRU_MAX_PAGE_NUM ; i++) 
 		total += (double)lru_hist_[i];
+	printf("lru endless:%.10lf\n", (double)cold_miss / total);
 	sprintf(lru_miss_curve_name, "%d_lru_mc.txt", start.tv_sec);
 	lru_mcf = fopen(lru_miss_curve_name, "w");
 
@@ -53,42 +55,45 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_ctrl->reset == 1)
 		aet_ctrl->reset = 0;
 	
-	
-	/*
-	if (aet_time >= 80) { 
-		aet_ctrl->hot_set_time = HOT_SET_END + 1;
-		printf("cal aet time 80 times exits! tott:%d\n", tott);
+	if (aet_time >= 30) { 
+		aet_ctrl->sleep = 1;
+		//printf("cal aet time 30 times exits! tott:%d\n", tott);
 		return;
 	}
-	*/
 	
-
-	//if (tott < 1000) { 
-		//aet_ctrl->reset = 0;
-		//printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num);
-		//return;
-	//}
+	if (tott < 1000) { 
+		aet_ctrl->reset = 0;
+		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d tott:%lu\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, tott);
+		return;
+	}
     unsigned long long T = 0;
 	unsigned long first = aet_ctrl->aet_hist_[dom][1];
 	int longest = aet_ctrl->longest_aet_hist_pos[dom];
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];
 	unsigned long lru_hist_[LRU_MAX_PAGE_NUM];
+	unsigned long cold_miss = aet_ctrl->cold_miss_[dom];
+	unsigned long lru_cold_miss = aet_ctrl->lru_cold_miss_[dom];
 	memcpy(aet_hist_, aet_ctrl->aet_hist_, sizeof(aet_ctrl->aet_hist_));
 	memcpy(lru_hist_, aet_ctrl->lru_hist_, sizeof(aet_ctrl->lru_hist_));
 	//clear
 	aet_ctrl->tot_ref_[dom] = 0;
+	aet_ctrl->cold_miss_[dom] = 0;
+	aet_ctrl->lru_cold_miss_[dom] = 0;
 	aet_ctrl->longest_aet_hist_pos[dom] = 0;
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->lru_hist_, 0, sizeof(aet_ctrl->lru_hist_));
+	/*
+	if (aet_time % 12 == 0)
+		aet_ctrl->reset = 0;
+	*/	
 	if (aet_ctrl->sleep == 0) { 
 		printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
-		aet_ctrl->sleep = 1;
+		//aet_ctrl->sleep = 1;
 	}
 	else { 
 		// force reset if running enough time
 		if (aet_time % 4 == 0) { 
 			aet_ctrl->sleep = 0;
-			aet_ctrl->reset = 0;
 		}
 		return;
 	}
@@ -138,17 +143,14 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	*/
 
     //double N = tott + m;
-    double N = tott + 1.0 * tott / (n-m) * m;
+    //double N = tott + 1.0 * tott / (n-m) * m;
+	double N = (double)tott + (double)cold_miss;
 	
-	//printf("endless:%.10lf\n", 1.0 * tott / (n - m) * m / N);
-	//printf("m:%lu\n", m);
-	//printf("n:%lu dtlb miss:%lu\n", n, dtlb_miss);
-	//printf("origin first:%lu\n", first);
-	printf("lru lru_list_pos:%d\n", aet_ctrl->lru_list_pos);
-	lru_process(lru_hist_);
-	printf("tott:%lu hot set time:%d\n", tott, aet_ctrl->hot_set_time);
-	//printf("N:%.10lf\n", N);
-	//printf("longest:%d\n", longest);
+	printf("------\n");
+	printf("start:%d\n", start.tv_sec);
+	printf("lru_list_pos:%d lru cold miss:%lu\n", aet_ctrl->lru_list_pos, lru_cold_miss);
+	lru_process(lru_hist_, lru_cold_miss);
+	printf("tott:%lu hot set time:%d aet func time:%lu add hot set num:%lu cold miss:%lu endless:%.10lf\n", tott, aet_ctrl->hot_set_time, aet_ctrl->aet_func_num, aet_ctrl->add_to_hot_set_num, cold_miss, (double)cold_miss / N);
 
 	int domain = 256;
     double tot = 0.0;
@@ -249,6 +251,7 @@ void print(int arg) {
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict1:%llu hash conflict2:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num1, aet_ctrl->hash_conflict_num2, aet_ctrl->vmexit_num);
+		printf("add to all sl1mfn time:%lus track aet time:%lus\n", aet_ctrl->add_to_all_sl1mfn_time / 1000000, aet_ctrl->track_aet_time / 10000000);
 	}
 	
 	if (arg == 1) {
@@ -311,6 +314,12 @@ void reset() {
 	aet_ctrl->hot_set_time = 0;
 	aet_ctrl->hot_set_pos = 0;
 	aet_ctrl->last_set_num = 0;
+	aet_ctrl->add_to_all_sl1mfn_time = 0;
+	aet_ctrl->track_aet_time = 0;
+	aet_ctrl->aet_func_num = 0;
+	aet_ctrl->sleep = 0;
+	aet_ctrl->track_fault_time = 0;
+	aet_ctrl->add_to_hot_set_time = 0;
 	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
 	//memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
@@ -328,6 +337,7 @@ int main(int argc, char** argv) {
 	int do_aet = 0;
 	int aet_time = 0;
 	unsigned long n;
+	//printf("----------\nstart:\n");
 	while ((ch = getopt(argc, argv, "s:rc:l:t:")) != -1) {
 		switch (ch) {
 			case 's':
@@ -340,7 +350,7 @@ int main(int argc, char** argv) {
 				reset();
 				break;
 			case 't':
-				printf("option t:%s\n", optarg);
+				//printf("option t:%s\n", optarg);
 				aet_time = atoi(optarg);
 			case 'c':
 				//printf("option c:%s\n", optarg);
@@ -357,7 +367,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (do_aet) { 
-		aet_process(0, n, aet_time);
+		aet_process(1, n, aet_time);
 	}
 
 	return 0;

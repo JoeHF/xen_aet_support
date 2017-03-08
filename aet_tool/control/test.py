@@ -39,13 +39,22 @@ sender = 'from@runoob.com'
 receivers = ['707980114@qq.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
 
 output = output.split()
+tot = 100
+count = 0
 for pic in output:
-	if ".png" in pic and "148" not in pic:
+	if ".png" in pic and "lru" not in pic:
 		#创建一个带附件的实例
 		#print pic
-		part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  
-		part.add_header('Content-Disposition', 'attachment', filename=pic)  
-		message.attach(part)  
+		if "148" in pic:
+			count += 1
+			if count <= tot:
+				part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  
+				part.add_header('Content-Disposition', 'attachment', filename=pic)  
+				message.attach(part)  
+		else:
+			part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  
+			part.add_header('Content-Disposition', 'attachment', filename=pic)  
+			message.attach(part)
 
 try:
 	smtpObj = smtplib.SMTP('localhost')

@@ -5,7 +5,7 @@
 #define SHARED_DATA_START (PML4_ADDR(270))
 #define LRU_LIST_VIRT_START     (PML4_ADDR(271))
 /* some switchers*/
-#define LRU_FLAG 0
+#define LRU_FLAG 1
 #define SAMPLE_FLAG 0
 
 #define TRACK_RATE 4 
@@ -137,6 +137,8 @@ struct AET_ctrl {
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];	
 	int longest_aet_hist_pos[MAX_DOM_NR];
 	unsigned long tot_ref_[MAX_DOM_NR];
+	unsigned long cold_miss_[MAX_DOM_NR];
+	unsigned long lru_cold_miss_[MAX_DOM_NR];
 
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
@@ -145,6 +147,7 @@ struct AET_ctrl {
 	/* add to pending set */
 	unsigned long set_num;
 	int sl1mfn_num;
+	int last_sl1mfn_num;
 	int sl1mfn_start;
 	struct pending_node all_sl1mfn[MAX_PENDING_PAGE];
 	unsigned long set_sl1mfn_page_num;
@@ -180,6 +183,11 @@ struct AET_ctrl {
 	int endless;
 	int lru_length;
 	int lru_list_pos;
+	/* monitor */
+	unsigned long add_to_all_sl1mfn_time;
+	unsigned long track_aet_time;
+	unsigned long aet_func_num;
+	unsigned long add_to_hot_set_num;
 };
 
 void aet_init(void);

@@ -86,13 +86,16 @@ run_spec() {
 		tmp=`ps -A | awk '{print $4}'  | grep -w xc`
 		sleep 10
 	done
-	./draw_pic.sh $benchmark
+	echo "draw_pic:"
 	rm -rf ./temp/$benchmark
+	./draw_pic.sh $benchmark
 	if [ ! -d "./temp/$benchmark" ] ; then
 		mkdir -p ./temp/$benchmark
 	fi
 	mv 148* ./temp/$benchmark
+	echo "cmp_wss:"
 	python cmp_wss.py $benchmark
+	echo "test:"
 	python test.py $benchmark
 }
 
