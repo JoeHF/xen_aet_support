@@ -14,21 +14,20 @@ err_rate_file = open("./temp/" + benchmark + "/" + "tmp.txt", "a")
 range_limit = 10 
 err_rate_all = 0
 dis = 10
+start = 10
 for i in range(0, range_limit):
 	lru_wss = []
 	aet_wss = []
 	y_max = 0
 	thresh = 0.01 * (i + 1)
-	if i % 5 == 0:
-		print "thresh:{0}".format(thresh)
 	l_wss = 0
 	a_wss = 0
 	l_skip = 0
 	a_skip = 0
 	l_x = []
-	lx = 0
+	lx = start 
 	a_x = []
-	ax = 0
+	ax = start 
 	for file in output:
 		if "lru_mc" in file and "png" not in file:
 			lx += dis	
@@ -50,6 +49,8 @@ for i in range(0, range_limit):
 				lru_wss.append(l_wss)
 
 	#print "-----"
+	valid = 0
+	invalid = 0
 	for file in output:
 		if "miss_curve" in file and "png" not in file:
 			ax += dis 
@@ -64,15 +65,17 @@ for i in range(0, range_limit):
 					#print "{0}:{1}".format(wss, line)
 				odd = (odd + 1) % 2	
 			if float(line) >= thresh:
-				#print file 
 				a_skip += 1
+				invalid += 1
 			else:	
+				valid += 1
 				if wss > y_max:
 					y_max = wss
 				a_x.append(ax)
 				a_wss = wss
 				aet_wss.append(a_wss)
 
+	print "thresh:{2} aet valid/tot:{0}/{1}".format(valid, valid + invalid, thresh)
 	#print "lru skip:{0} aet skip:{1}".format(l_skip, a_skip)
 	tot_err_rate = 0
 	warm_up = 0
@@ -108,8 +111,7 @@ for i in range(0, range_limit):
 
 	fig = plt.figure()
 	plt.plot(a_x, aet_wss, 'r.-', label="aet_wss")
-	plt.plot(l_x, lru_wss, 'b.-', label="lru_wss")
-	plt.title("WSS Compare between AET and LRU")
+	plt.title("WSS")
 	plt.ylim(0, int(y_max * 1.5))
 	plt.xlabel("Time(s)")
 	plt.ylabel("Wss(MB)")

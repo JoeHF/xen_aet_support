@@ -63,6 +63,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	
 	if (tott < 1000) { 
 		aet_ctrl->reset = 0;
+		printf("------\n");
 		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d tott:%lu\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, tott);
 		return;
 	}
@@ -82,8 +83,8 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	aet_ctrl->longest_aet_hist_pos[dom] = 0;
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->lru_hist_, 0, sizeof(aet_ctrl->lru_hist_));
-	/*
-	if (aet_time % 12 == 0)
+	/*	
+	if (aet_time % 3 == 0)
 		aet_ctrl->reset = 0;
 	*/	
 	if (aet_ctrl->sleep == 0) { 
@@ -144,14 +145,15 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 
     //double N = tott + m;
     //double N = tott + 1.0 * tott / (n-m) * m;
-	double N = (double)tott + (double)cold_miss;
+	//double N = (double)tott + (double)cold_miss;
 	
 	printf("------\n");
 	printf("start:%d\n", start.tv_sec);
 	printf("lru_list_pos:%d lru cold miss:%lu\n", aet_ctrl->lru_list_pos, lru_cold_miss);
 	lru_process(lru_hist_, lru_cold_miss);
-	printf("tott:%lu hot set time:%d aet func time:%lu add hot set num:%lu cold miss:%lu endless:%.10lf\n", tott, aet_ctrl->hot_set_time, aet_ctrl->aet_func_num, aet_ctrl->add_to_hot_set_num, cold_miss, (double)cold_miss / N);
+	printf("tott:%lu hot set time:%d add hot set num:%lu cold miss:%lu endless:%.10lf\n", tott, aet_ctrl->hot_set_time, aet_ctrl->add_to_hot_set_num, cold_miss, (double)cold_miss / ((double)tott + (double)cold_miss));
 
+	double N = (double)tott;
 	int domain = 256;
     double tot = 0.0;
 	double sum = 0.0;

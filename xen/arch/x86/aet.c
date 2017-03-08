@@ -760,7 +760,7 @@ static int full_track_algorithm(int *hash_conflict) {
 	int dom = current->domain->domain_id;
 	printk("domid:%d last_sl1mfn_num:%d\n", dom, aet_ctrl->last_sl1mfn_num);
 	dom = 1;
-	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
+	//memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
 	//for (i = aet_ctrl->last_sl1mfn_num ; i < aet_ctrl->sl1mfn_num ; i++) { 
 	for (i = 0 ; i < aet_ctrl->sl1mfn_num ; i++) { 
 		sl1mfn = aet_ctrl->all_sl1mfn[i].sl1mfn;
@@ -822,13 +822,13 @@ static int full_track_algorithm(int *hash_conflict) {
 								hn->sl1mfn_pos = j;
 								hn->track_time = 0;
 								is_hash_conflict = 0;
-								printk("tracked not in hash\n");
+								//printk("tracked not in hash\n");
 								break;
 							}
 							else if (hn->mfn == mfn) { 
 								hn->sl1mfn = i;
 								hn->sl1mfn_pos = j;
-								hn->track_time = 0;
+								//hn->track_time = 0;
 								is_hash_conflict = 0;
 								break;
 							}
