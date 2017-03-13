@@ -55,19 +55,15 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_ctrl->reset == 1)
 		aet_ctrl->reset = 0;
 	
+	/*
 	if (aet_time >= 30) { 
 		aet_ctrl->sleep = 1;
 		//printf("cal aet time 30 times exits! tott:%d\n", tott);
 		return;
 	}
+	*/
 	
-	if (tott < 1000) { 
-		aet_ctrl->reset = 0;
-		printf("------\n");
-		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d tott:%lu\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, tott);
-		return;
-	}
-    unsigned long long T = 0;
+	unsigned long long T = 0;
 	unsigned long first = aet_ctrl->aet_hist_[dom][1];
 	int longest = aet_ctrl->longest_aet_hist_pos[dom];
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];
@@ -87,6 +83,14 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_time % 3 == 0)
 		aet_ctrl->reset = 0;
 	*/	
+	if (tott + cold_miss < 1000) { 
+		aet_ctrl->reset = 0;
+		printf("------\n");
+		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d tott:%lu cold miss:%lu\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, tott, cold_miss);
+		return;
+	}
+
+	/*
 	if (aet_ctrl->sleep == 0) { 
 		printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
 		//aet_ctrl->sleep = 1;
@@ -98,6 +102,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 		}
 		return;
 	}
+	*/
     
 	char miss_curve_file_name[30];
 	char aet_hist_file_name[30];
@@ -150,6 +155,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	printf("------\n");
 	printf("start:%d\n", start.tv_sec);
 	printf("lru_list_pos:%d lru cold miss:%lu\n", aet_ctrl->lru_list_pos, lru_cold_miss);
+	printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
 	lru_process(lru_hist_, lru_cold_miss);
 	printf("tott:%lu hot set time:%d add hot set num:%lu cold miss:%lu endless:%.10lf\n", tott, aet_ctrl->hot_set_time, aet_ctrl->add_to_hot_set_num, cold_miss, (double)cold_miss / ((double)tott + (double)cold_miss));
 

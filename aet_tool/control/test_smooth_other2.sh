@@ -1,0 +1,9 @@
+./test_smooth.sh fullsoplex
+./test_smooth.sh fullcalculix
+./test_smooth.sh fullhmmer
+./test_smooth.sh fullsjeng
+./test_smooth.sh fulllib
+./test_smooth.sh fullh264
+./test_smooth.sh fulltonto
+./test_smooth.sh fullomnetpp
+./test_smooth.sh fullsphinx3

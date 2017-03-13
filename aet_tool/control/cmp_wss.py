@@ -1,5 +1,7 @@
 import os,sys
 import matplotlib.pyplot as plt
+
+bench_range = {"fullmcf":2000, "fullastar":300, "fullbzip2":400, "fullbwaves":2000, "fullgcc":500, "fullmilc":1200, "fullzeusmp":800, "fullcactus":600, "fullgems":1000, "fulllbm":600, "fullsoplex":400, "fullcalculix":100, "fullhmmer":100, "fullsjeng":300, "fulllib":100, "fullh264":100, "fulltonto":100, "fullomnetpp":200, "fullsphinx3":100}
 if len(sys.argv) != 2:
 	print "not enough parameter!"
 	sys.exit()
@@ -11,10 +13,10 @@ output = output.read()
 
 output = output.split()
 err_rate_file = open("./temp/" + benchmark + "/" + "tmp.txt", "a")
-range_limit = 10 
+range_limit = 20 
 err_rate_all = 0
 dis = 10
-start = 10
+start = 20
 for i in range(0, range_limit):
 	lru_wss = []
 	aet_wss = []
@@ -28,27 +30,6 @@ for i in range(0, range_limit):
 	lx = start 
 	a_x = []
 	ax = start 
-	for file in output:
-		if "lru_mc" in file and "png" not in file:
-			lx += dis	
-			fo = open("./temp/" + benchmark + "/" + file)
-			wss = 0
-			for line in fo.readlines():
-				wss += 0.00390625 # 1/256 
-				if float(line) < thresh:
-					break
-				#print "{0}:{1}".format(wss, line)
-			if float(line) >= thresh:
-				#print file
-				l_skip += 1
-			else:	
-				if wss > y_max:
-					y_max = wss
-				l_x.append(lx)
-				l_wss = wss
-				lru_wss.append(l_wss)
-
-	#print "-----"
 	valid = 0
 	invalid = 0
 	for file in output:
@@ -64,7 +45,7 @@ for i in range(0, range_limit):
 						break
 					#print "{0}:{1}".format(wss, line)
 				odd = (odd + 1) % 2	
-			if float(line) >= thresh:
+			if line.strip('\n') == "-nan" or float(line) >= thresh:
 				a_skip += 1
 				invalid += 1
 			else:	
@@ -75,7 +56,7 @@ for i in range(0, range_limit):
 				a_wss = wss
 				aet_wss.append(a_wss)
 
-	print "thresh:{2} aet valid/tot:{0}/{1}".format(valid, valid + invalid, thresh)
+	print "thresh:{2} aet valid/tot:{0}/{1} ymax:{3}".format(valid, valid + invalid, thresh, y_max)
 	#print "lru skip:{0} aet skip:{1}".format(l_skip, a_skip)
 	tot_err_rate = 0
 	warm_up = 0
@@ -112,7 +93,11 @@ for i in range(0, range_limit):
 	fig = plt.figure()
 	plt.plot(a_x, aet_wss, 'r.-', label="aet_wss")
 	plt.title("WSS")
-	plt.ylim(0, int(y_max * 1.5))
+	#plt.ylim(0, int(y_max * 1.5))
+	if bench_range.has_key(benchmark):
+		plt.ylim(0, bench_range[benchmark])
+	else:
+		plt.ylim(0, 2000)
 	plt.xlabel("Time(s)")
 	plt.ylabel("Wss(MB)")
 	plt.legend()

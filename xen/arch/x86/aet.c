@@ -239,7 +239,14 @@ static void add_to_aet_histogram_pf(int domain_id, unsigned long old_pf, unsigne
 
 	if (new_pf - old_pf < aet_ctrl->hot_set_size)
 		printk("[WARNING] the distance is less than hot set size:%d\n", aet_ctrl->hot_set_size);
-	compressed_dis = domain_value_to_index(new_pf - old_pf);	
+
+	if (SAMPLE_FLAG) { 
+		compressed_dis = domain_value_to_index((new_pf - old_pf) * TRACK_RATE);
+	}
+	else { 
+		compressed_dis = domain_value_to_index(new_pf - old_pf);	
+	}
+
 	//compressed_dis = domain_value_to_index(new_pf - old_pf - aet_ctrl->hot_set_size);	
 	add_user_mode_fault_count(11, 0, 0, new_pf - old_pf, compressed_dis);
 	if (compressed_dis >= MAX_PAGE_NUM) {
@@ -502,7 +509,8 @@ int track_aet_fault(int domain_id,
 			lru_func(hn->mfn, 1);
 	}
 	else { 
-		printk("[WARN] can not find in hash set\n");
+		if (!SAMPLE_FLAG)
+			printk("[WARN] can not find in hash set\n");
 	}
 
 out:	
@@ -653,15 +661,57 @@ static int rand_track_algorithm(int *hash_conflict) {
 			sp = map_domain_page(sl1mfn);
 			for (j = 0 ; j < 512 ; j++) { 
 				sl1e = sp + j;
-				if (counter == rand_pos) {
-					rand_chosen++;
-					counter = 0;
-					rand_pos = curl_rand() % (TRACK_RATE * 2);
-					if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
-						&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
-						&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
-						&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) { 
-						mfn = (sl1e->l1 & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
+				if ((shadow_l1e_get_flags(*sl1e) & _PAGE_USER)
+					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
+					&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
+					&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) { 
+					mfn = (sl1e->l1 & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
+					key = mfn % HASH;
+					is_hash_conflict = 1;
+					for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
+						hn = aet_ctrl->hns_[dom][key] + hash_pos;
+						if (hn->mfn == 0) { 
+							hn->mfn = mfn;
+							hn->sl1mfn = i;
+							hn->sl1mfn_pos = j;
+							hn->track_time = 0;
+							is_hash_conflict = 0;
+							break;
+						}
+						else if (hn->mfn == mfn) { 
+							hn->sl1mfn = i;
+							hn->sl1mfn_pos = j;
+							hn->track_time = 0;
+							is_hash_conflict = 0;
+							break;
+						}
+					}
+
+					if (is_hash_conflict == 0) { 
+						count++;
+						add_set_aet_magic_count(12, 0, 0, hn->mfn, hn->track_time);
+						if (counter == rand_pos) {
+							rand_chosen++;
+							counter = 0;
+							rand_pos = curl_rand() % (TRACK_RATE * 2);
+							sl1e->l1 |= SH_L1E_AET_MAGIC;
+							sl1e->l1 &= (~user_bit);
+							sl1e->l1 &= (~access_bit);
+						}
+						else { 
+							rand_skip++;
+							counter++;
+						}
+					}
+					else { 
+						(*hash_conflict)++;
+					}
+				}
+				else { 
+					if ((sl1e->l1 & SH_L1E_AET_MAGIC) != 0) {
+						already_set++;
+						mfn = ((sl1e->l1 ^ 0x8000000000000ULL) & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
+						//printk("sl1e->l1:%lx mfn:%lx\n", sl1e->l1, mfn);
 						key = mfn % HASH;
 						is_hash_conflict = 1;
 						for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
@@ -677,54 +727,12 @@ static int rand_track_algorithm(int *hash_conflict) {
 							else if (hn->mfn == mfn) { 
 								hn->sl1mfn = i;
 								hn->sl1mfn_pos = j;
-								hn->track_time = 0;
+								//hn->track_time = 0;
 								is_hash_conflict = 0;
 								break;
 							}
 						}
-
-						if (is_hash_conflict == 0) { 
-							count++;
-							add_set_aet_magic_count(12, 0, 0, hn->mfn, hn->track_time);
-							sl1e->l1 |= SH_L1E_AET_MAGIC;
-							sl1e->l1 &= (~user_bit);
-							sl1e->l1 &= (~access_bit);
-						}
-						else { 
-							(*hash_conflict)++;
-						}
 					}
-					else { 
-						if ((sl1e->l1 & SH_L1E_AET_MAGIC) != 0) {
-							already_set++;
-							mfn = ((sl1e->l1 ^ 0x8000000000000ULL) & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
-							//printk("sl1e->l1:%lx mfn:%lx\n", sl1e->l1, mfn);
-							key = mfn % HASH;
-							is_hash_conflict = 1;
-							for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
-								hn = aet_ctrl->hns_[dom][key] + hash_pos;
-								if (hn->mfn == 0) { 
-									hn->mfn = mfn;
-									hn->sl1mfn = i;
-									hn->sl1mfn_pos = j;
-									hn->track_time = 0;
-									is_hash_conflict = 0;
-									break;
-								}
-								else if (hn->mfn == mfn) { 
-									hn->sl1mfn = i;
-									hn->sl1mfn_pos = j;
-									hn->track_time = 0;
-									is_hash_conflict = 0;
-									break;
-								}
-							}
-						}
-					}
-				}
-				else { 
-					rand_skip++;
-					counter++;
 				}
 			}
 		}

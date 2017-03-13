@@ -8,7 +8,7 @@
 #define LRU_FLAG 0
 #define SAMPLE_FLAG 0
 
-#define TRACK_RATE 4 
+#define TRACK_RATE 8 
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
