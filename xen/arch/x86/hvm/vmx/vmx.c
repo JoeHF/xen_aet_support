@@ -2784,7 +2784,7 @@ void vmx_vmexit_handler(struct cpu_user_regs *regs)
 			unsigned long timestamp_now = get_localtime_us(v->domain);
 			//if (timestamp_now - 200000 > last_timestamp) { 
 				last_timestamp = timestamp_now;
-				rand_track_page();
+				//rand_track_page();
 			//}
 		}
 	}

@@ -229,9 +229,11 @@ void hc_set_debug_reg(unsigned long va, int cpu_id);
 void track_debug_reg(unsigned long va);
 
 /* The following function is used to add to pending set */
-void add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va);
+int add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va);
 void rand_track_page(void);
-
+void add_to_hash_set(unsigned long mfn, int sl1mfn, int sl1mfn_pos);
+unsigned long add_to_hot_set(struct hot_set_member *hsm); 
+void add_fault_time(void);
 /* The following function is used by iss16*/
 void add_vmexit_num(void);
 #endif

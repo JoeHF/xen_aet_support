@@ -237,8 +237,8 @@ static void add_to_aet_histogram_pf(int domain_id, unsigned long old_pf, unsigne
 		return;
 	}
 
-	if (new_pf - old_pf < aet_ctrl->hot_set_size)
-		printk("[WARNING] the distance is less than hot set size:%d\n", aet_ctrl->hot_set_size);
+	//if (new_pf - old_pf < aet_ctrl->hot_set_size)
+	//	printk("[WARNING] the distance is less than hot set size:%d diff:%lu\n", aet_ctrl->hot_set_size, new_pf - old_pf);
 	compressed_dis = domain_value_to_index(new_pf - old_pf);	
 	//compressed_dis = domain_value_to_index(new_pf - old_pf - aet_ctrl->hot_set_size);	
 	add_user_mode_fault_count(11, 0, 0, new_pf - old_pf, compressed_dis);
@@ -340,7 +340,7 @@ static void track_specific_pte(int sl1mfn_id, int sl1mfn_pos_id) {
 	shadow_l1e_t *sp, *sl1e;
 	unsigned long user_bit = 0x4;
 	unsigned long access_bit = 0x20;
-
+	unsigned long mfn;
 
 	if (mfn_to_page(sl1mfn)->u.sh.type == SH_type_l1_shadow
 		|| mfn_to_page(sl1mfn)->u.sh.type == SH_type_fl1_shadow) {
@@ -350,6 +350,9 @@ static void track_specific_pte(int sl1mfn_id, int sl1mfn_pos_id) {
 			&& (shadow_l1e_get_flags(*sl1e) & _PAGE_RW)
 			&& (shadow_l1e_get_flags(*sl1e) & _PAGE_PRESENT)
 			&& (sl1e->l1 & SH_L1E_AET_MAGIC) == 0) { 
+			mfn = (sl1e->l1 & (PADDR_MASK&PAGE_MASK)) >> PAGE_SHIFT;
+			//printk("%s track pte mfn:%lx sl1mfn_id:%d sl1mfn_pos:%d\n", __func__, mfn, sl1mfn_id, sl1mfn_pos_id);
+			add_to_hash_set(mfn, sl1mfn_id, sl1mfn_pos_id);
 			sl1e->l1 |= SH_L1E_AET_MAGIC;
 			sl1e->l1 &= (~user_bit);
 			sl1e->l1 &= (~access_bit);
@@ -383,7 +386,7 @@ static void lru_func(unsigned long mfn, int add_to_hist_) {
 		add_to_lru_list_head(new_node);
 }
 
-static unsigned long add_to_hot_set(struct hot_set_member *hsm) { 
+unsigned long add_to_hot_set(struct hot_set_member *hsm) { 
 	struct hot_set_member *current_hsm = aet_ctrl->hot_set + aet_ctrl->hot_set_pos;
 	unsigned long pop_mfn = 0;
 	aet_ctrl->add_to_hot_set_num++;
@@ -400,7 +403,8 @@ static unsigned long add_to_hot_set(struct hot_set_member *hsm) {
 		return pop_mfn;
 
 	aet_ctrl->add_to_hot_set_time++;
-	if (current_hsm->mfn != 0) { 
+	add_fault_time();
+	if (current_hsm->sl1mfn_id != 0 && current_hsm->sl1mfn_pos_id != 0) { 
 		/* for lru compare */
 		track_specific_pte(current_hsm->sl1mfn_id, current_hsm->sl1mfn_pos_id);
 		add_set_aet_magic_count(10, 0, 0, current_hsm->mfn, current_hsm->mfn);
@@ -418,8 +422,10 @@ static unsigned long add_to_hot_set(struct hot_set_member *hsm) {
 	}
 
 	aet_ctrl->hot_set_pos = (aet_ctrl->hot_set_pos + 1) % aet_ctrl->hot_set_size; 
+	//printk("hot set pos:%d fault time:%lu\n", aet_ctrl->hot_set_pos, aet_ctrl->track_fault_time);
 	if (aet_ctrl->hot_set_pos == 0) { 
 		aet_ctrl->hot_set_time++;
+		//printk("%s fault time:%lu\n", __func__, aet_ctrl->track_fault_time);
 	}
 
 	return pop_mfn;
@@ -464,6 +470,10 @@ static void aet_func(int domain_id, struct hash_node *hn) {
 	hn->track_time++;
 }
 
+void add_fault_time() { 
+	aet_ctrl->track_fault_time++;
+}
+
 int track_aet_fault(int domain_id, 
 					 unsigned long mfn, 
 					 unsigned long mem_counter, 
@@ -480,7 +490,6 @@ int track_aet_fault(int domain_id,
 	dtlb_miss = dtlb_load_miss + dtlb_store_miss;
 	aet_ctrl->mem_now = mem_counter;
 	aet_ctrl->dtlb_miss_now = dtlb_miss;
-	aet_ctrl->track_fault_time++;
 
 	if (aet_ctrl->sleep == 1)
 		goto out;
@@ -589,9 +598,9 @@ void track_debug_reg(unsigned long va) {
 #define L1_MASK  ((1UL << L2_PAGETABLE_SHIFT) - 1)
 
 /* need to be optimized */
-void add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va) {
+int add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va) {
 	unsigned long va_start = va - (va & L1_MASK & PAGE_MASK);
-	int i;
+	int i = -1;
 	unsigned long start = get_localtime_us(current->domain);
 	unsigned long end;
 	//printk("%s sl1mfn:%lx, va:%lx\n", __func__, sl1mfn, va);
@@ -608,12 +617,13 @@ void add_to_all_sl1mfn(unsigned long sl1mfn, unsigned long va) {
 
 	aet_ctrl->all_sl1mfn[aet_ctrl->sl1mfn_num].sl1mfn = sl1mfn;
 	aet_ctrl->all_sl1mfn[aet_ctrl->sl1mfn_num].va = va_start;
+	i = aet_ctrl->sl1mfn_num;
 	aet_ctrl->sl1mfn_num++;
 	
 out:
 	end = get_localtime_us(current->domain);
 	aet_ctrl->add_to_all_sl1mfn_time += (end - start);
-	return;
+	return i;
 }
 
 static unsigned int curl_rand(void) { 
@@ -742,6 +752,43 @@ static int rand_track_algorithm(int *hash_conflict) {
 	printk("%s sl1mfn_num:%d invalid sl1mfn:%d already_set:%d\n", __func__, aet_ctrl->sl1mfn_num, invalid_sl1mfn, already_set);
 	printk("%s count:%d hash_conflict:%d rand_skip:%d/rand_chosen:%d\n", __func__, count, *hash_conflict, rand_skip, rand_chosen);
 	return count;
+}
+
+void add_to_hash_set(unsigned long mfn, int sl1mfn, int sl1mfn_pos) { 
+	int key;
+	int hash_pos;
+	int dom = current->domain->domain_id;
+	int is_hash_conflict = 1;
+	struct hash_node *hn;
+
+	key = mfn % HASH;
+	for (hash_pos = 0 ; hash_pos < HASH_CONFLICT_NUM ; hash_pos++) {
+		hn = aet_ctrl->hns_[dom][key] + hash_pos;
+		if (hn->mfn == 0) { 
+			hn->mfn = mfn;
+			hn->sl1mfn = sl1mfn;
+			hn->sl1mfn_pos = sl1mfn_pos;
+			hn->track_time = 0;
+			is_hash_conflict = 0;
+			break;
+		}
+		else if (hn->mfn == mfn) { 
+			hn->sl1mfn = sl1mfn;
+			hn->sl1mfn_pos = sl1mfn_pos;
+			//hn->track_time = 0;
+			is_hash_conflict = 0;
+			//if (aet_ctrl->track_fault_time - hn->pf < aet_ctrl->hot_set_size)
+			//	printk("%s track last pf:%lu now pf:%lu track_time:%d\n", __func__, hn->pf, aet_ctrl->track_fault_time, hn->track_time);
+			break;
+		}
+	}
+
+	if (is_hash_conflict)
+		printk("%s hash conflict\n", __func__);
+	else { 
+		//printk("%s sl1mfn:%d sl1mfn_pos:%d mfn:%lx\n", __func__, hn->sl1mfn, hn->sl1mfn_pos, hn->mfn);
+	}
+
 }
 
 static int full_track_algorithm(int *hash_conflict) { 

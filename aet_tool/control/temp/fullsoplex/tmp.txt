@@ -1,11 +1,11 @@
-0.01 error rate is:0 noise:0 total:27
-0.02 error rate is:0 noise:0 total:27
+0.01 error rate is:0 noise:0 total:28
+0.02 error rate is:0 noise:0 total:28
 0.03 error rate is:0 noise:0 total:28
 0.04 error rate is:0 noise:0 total:28
 0.05 error rate is:0 noise:0 total:28
-0.06 error rate is:0 noise:0 total:28
-0.07 error rate is:0 noise:0 total:28
-0.08 error rate is:0 noise:0 total:28
-0.09 error rate is:0 noise:0 total:28
-0.1 error rate is:0 noise:0 total:28
+0.06 error rate is:0 noise:0 total:29
+0.07 error rate is:0 noise:0 total:29
+0.08 error rate is:0 noise:0 total:29
+0.09 error rate is:0 noise:0 total:29
+0.1 error rate is:0 noise:0 total:29
 average error rate is:0

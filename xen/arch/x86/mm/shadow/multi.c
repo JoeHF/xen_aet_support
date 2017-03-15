@@ -3101,6 +3101,12 @@ static int sh_page_fault(struct vcpu *v,
 #endif
 #if GUEST_PAGING_LEVELS == 4
 #ifdef AET_PF
+	int sl1mfn_num;
+	unsigned long mfn;
+#endif
+#endif
+#if GUEST_PAGING_LEVELS == 4
+#ifdef AET_PF
 	int track_aet_fault_result = 0;
 #endif
 #endif
@@ -3507,9 +3513,12 @@ static int sh_page_fault(struct vcpu *v,
 		add_reserved_bit_fault_count();
 	}
 
+	/*
+	if (is_l1_track())
+		add_fault_time();
+		*/
 	
 	if (sh_l1e_is_aet_magic(*ptr_sl1e) && is_l1_track()) {
-		unsigned long mfn;
 		unsigned long mem, dtlb_load_miss, dtlb_store_miss;
 
 		unsigned long mem_counter;
@@ -3532,11 +3541,20 @@ static int sh_page_fault(struct vcpu *v,
 			unsigned long va_offset;
 			va_start = va - (va & L1_MASK & PAGE_MASK);
 			va_offset = ((va & L1_MASK & PAGE_MASK) >> 12);
-
+			//if (ptr_sl1e->l1 != 0)
+				//printk("%s ptr_sl1e:%lx\n", __func__, ptr_sl1e->l1);
 			//if (va_offset < CONSECUTIVE_SET_PAGE)
-				add_to_all_sl1mfn(sl1mfn, va);
+			sl1mfn_num = add_to_all_sl1mfn(sl1mfn, va);
+			if ((!sh_l1e_is_aet_magic(*ptr_sl1e)) && is_l1_track()) {
+				struct hot_set_member hsm;
+				//printk("-------\n");
+				hsm.sl1mfn_id = sl1mfn_num;
+				hsm.sl1mfn_pos_id = va_offset;
+				//printk("va:%lx va_start:%lx va_offset:%lu sl1mfn_num:%d pos_id:%d\n", va, va_start, va_offset, sl1mfn_num, hsm.sl1mfn_pos_id);
+				hsm.mfn = 0;
+				add_to_hot_set(&hsm);
+			}
 		}
-
 	}
 
 	if (sh_l1e_is_aet_magic(*ptr_sl1e)) {

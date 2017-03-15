@@ -55,7 +55,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_ctrl->reset == 1)
 		aet_ctrl->reset = 0;
 	
-	if (aet_time >= 60) { 
+	if (aet_time >= 30) { 
 		aet_ctrl->sleep = 1;
 		//printf("cal aet time 30 times exits! tott:%d\n", tott);
 		return;
@@ -152,6 +152,8 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	printf("lru_list_pos:%d lru cold miss:%lu\n", aet_ctrl->lru_list_pos, lru_cold_miss);
 	lru_process(lru_hist_, lru_cold_miss);
 	printf("tott:%lu hot set time:%d aet func time:%lu add hot set num:%lu cold miss:%lu endless:%.10lf\n", tott, aet_ctrl->hot_set_time, aet_ctrl->aet_func_num, aet_ctrl->add_to_hot_set_num, cold_miss, (double)cold_miss / N);
+	aet_ctrl->add_to_hot_set_num = 0; 
+	aet_ctrl->aet_func_num = 0;
 
 	int domain = 256;
     double tot = 0.0;
