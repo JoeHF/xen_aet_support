@@ -1,11 +1,11 @@
-#sh run_fake_pmu.sh fullastar
-#sleep 10
-#sh run_fake_pmu.sh fullbzip2 
-#sleep 10
-#sh run_fake_pmu.sh fullbwaves 
-#sleep 10
-#sh run_fake_pmu.sh fullgcc 
-#sleep 10
+sh run_fake_pmu.sh fullastar
+sleep 10
+sh run_fake_pmu.sh fullbzip2 
+sleep 10
+sh run_fake_pmu.sh fullbwaves 
+sleep 10
+sh run_fake_pmu.sh fullgcc 
+sleep 10
 sh run_fake_pmu.sh fullmcf 
 sleep 10
 sh run_fake_pmu.sh fullmilc 
