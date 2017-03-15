@@ -1,0 +1,8 @@
+option s:0
+start:0 mfn:0 track:0 open:0
+reversed_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0 tracked_aet_magic_count/set_aet_magic_count: 0/0
+page fault count:0
+user mode:0 reserved bit:0 both:0
+total count:0 set_pending_page_num:0 all_sl1mfn_num:0 set sl1mfn page num:0
+hash conflict1:0 hash conflict2:0 vmexit_num:0
+add to all sl1mfn time:0s track aet time:0s

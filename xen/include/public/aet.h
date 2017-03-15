@@ -6,7 +6,7 @@
 #define LRU_LIST_VIRT_START     (PML4_ADDR(271))
 /* some switchers*/
 #define LRU_FLAG 0
-#define SAMPLE_FLAG 0
+#define SAMPLE_FLAG 1
 
 #define TRACK_RATE 8 
 #define TLB_ENTRIES 512

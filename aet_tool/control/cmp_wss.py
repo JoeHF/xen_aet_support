@@ -95,7 +95,7 @@ for i in range(0, range_limit):
 	plt.title("WSS")
 	#plt.ylim(0, int(y_max * 1.5))
 	if bench_range.has_key(benchmark):
-		plt.ylim(0, bench_range[benchmark])
+		plt.ylim(0, bench_range[benchmark] * 1.5)
 	else:
 		plt.ylim(0, 2000)
 	plt.xlabel("Time(s)")
