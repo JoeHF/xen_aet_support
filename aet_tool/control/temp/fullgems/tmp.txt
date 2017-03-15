@@ -1,22 +1,11 @@
-0.01 error rate is:0 noise:0 total:43
-0.02 error rate is:0 noise:0 total:48
-0.03 error rate is:0 noise:0 total:52
-0.04 error rate is:0 noise:0 total:54
-0.05 error rate is:0 noise:0 total:55
-0.06 error rate is:0 noise:0 total:55
-0.07 error rate is:0 noise:0 total:55
-0.08 error rate is:0 noise:0 total:55
-0.09 error rate is:0 noise:0 total:55
-0.1 error rate is:0 noise:0 total:55
-average error rate is:0
-0.01 error rate is:0 noise:0 total:43
-0.02 error rate is:0 noise:0 total:48
-0.03 error rate is:0 noise:0 total:52
-0.04 error rate is:0 noise:0 total:54
-0.05 error rate is:0 noise:0 total:55
-0.06 error rate is:0 noise:0 total:55
-0.07 error rate is:0 noise:0 total:55
-0.08 error rate is:0 noise:0 total:55
-0.09 error rate is:0 noise:0 total:55
-0.1 error rate is:0 noise:0 total:55
+0.01 error rate is:0 noise:0 total:21
+0.02 error rate is:0 noise:0 total:26
+0.03 error rate is:0 noise:0 total:45
+0.04 error rate is:0 noise:0 total:45
+0.05 error rate is:0 noise:0 total:45
+0.06 error rate is:0 noise:0 total:45
+0.07 error rate is:0 noise:0 total:45
+0.08 error rate is:0 noise:0 total:47
+0.09 error rate is:0 noise:0 total:47
+0.1 error rate is:0 noise:0 total:48
 average error rate is:0
