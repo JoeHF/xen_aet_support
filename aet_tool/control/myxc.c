@@ -83,7 +83,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	if (aet_time % 3 == 0)
 		aet_ctrl->reset = 0;
 	*/	
-	if (tott + cold_miss < 1000) { 
+	if (tott + cold_miss < 100) { 
 		aet_ctrl->reset = 0;
 		printf("------\n");
 		printf("tott is zero reset:%d sl1mfn_num:%d last_set_num:%d tott:%lu cold miss:%lu\n", aet_ctrl->reset, aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, tott, cold_miss);
@@ -253,9 +253,9 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 void print(int arg) {
 	if (arg != 2) { 
 		printf("start:%d mfn:%lx track:%d open:%d\n", aet_ctrl->start_, aet_ctrl->sl4mfn_, aet_ctrl->track_, aet_ctrl->open_);
-		printf("reversed_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu\n", 
-				aet_ctrl->reversed_aet_magic_count, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count1, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count2, aet_ctrl->set_aet_magic_count);
-		printf("page fault count:%llu\n", aet_ctrl->page_fault_count);
+		printf("reversed_aet_magic_count/set_aet_magic_count: %lu/%lu tracked_aet_magic_count/set_aet_magic_count: %lu/%lu\n", 
+				aet_ctrl->reversed_aet_magic_count, aet_ctrl->set_aet_magic_count, aet_ctrl->tracked_aet_magic_count, aet_ctrl->set_aet_magic_count);
+		printf("page fault count:%llu original pf:%llu aet pf:%llu\n", aet_ctrl->page_fault_count, aet_ctrl->page_fault_count - aet_ctrl->tracked_aet_magic_count, aet_ctrl->tracked_aet_magic_count);
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict1:%llu hash conflict2:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num1, aet_ctrl->hash_conflict_num2, aet_ctrl->vmexit_num);
@@ -301,8 +301,7 @@ void reset() {
 	aet_ctrl->surplus_total = 0;
 	aet_ctrl->surplus_time = 0;
 	aet_ctrl->set_aet_magic_count = 0;
-	aet_ctrl->tracked_aet_magic_count1 = 0;
-	aet_ctrl->tracked_aet_magic_count2 = 0;
+	aet_ctrl->tracked_aet_magic_count = 0;
 	aet_ctrl->reversed_aet_magic_count = 0;
 	aet_ctrl->page_fault_count = 0;
 	aet_ctrl->user_mode_fault = 0;

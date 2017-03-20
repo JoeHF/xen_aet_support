@@ -8,7 +8,7 @@
 #define LRU_FLAG 0
 #define SAMPLE_FLAG 1
 
-#define TRACK_RATE 8 
+#define TRACK_RATE 16
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
@@ -125,8 +125,7 @@ struct AET_ctrl {
 	unsigned long both_fault;
 	unsigned long set_aet_magic_count;
 	unsigned long reversed_aet_magic_count;
-	unsigned long tracked_aet_magic_count1;
-	unsigned long tracked_aet_magic_count2;
+	unsigned long tracked_aet_magic_count;
 	unsigned long page_fault_count;
 	unsigned long total_count;
 	struct tracked_va tvs[MAX_ARRAY_SIZE];
@@ -199,8 +198,7 @@ int is_aet_track_open(void);
 int l1_set_over(int count);
 void add_set_aet_magic_count(unsigned long va, unsigned long l1, unsigned long l1p, unsigned long ec, unsigned long mc);
 void add_reversed_aet_magic_count(unsigned long va, unsigned long l1);
-void add_tracked_aet_magic_count1(void);
-void add_tracked_aet_magic_count2(void);
+void add_tracked_aet_magic_count(void);
 void add_page_fault_count(void);
 void add_last_shadow_l1e(unsigned long sl1mfn, unsigned long va);
 void get_last_shadow_l1e(unsigned long *sl1mfn, unsigned long *va);

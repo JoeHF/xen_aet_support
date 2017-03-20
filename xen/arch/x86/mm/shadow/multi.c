@@ -3518,7 +3518,7 @@ static int sh_page_fault(struct vcpu *v,
 		mfn = ((mfn_x(shadow_l1e_get_mfn(*ptr_sl1e))) & 0x7fffffffff);
 		if (mfn != 0)
 			track_aet_fault_result = track_aet_fault(v->domain->domain_id, mfn, mem_counter, dtlb_load_miss, dtlb_store_miss, sl1mfn);
-		add_tracked_aet_magic_count1();
+		add_tracked_aet_magic_count();
 		//printk("[DEBUG]aet fault va:%lx\n", va);
 	}
 	

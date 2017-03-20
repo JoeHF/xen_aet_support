@@ -95,12 +95,8 @@ void add_reversed_aet_magic_count(unsigned long va, unsigned long l1) {
 	aet_ctrl->reversed_aet_magic_count++;
 }
 
-void add_tracked_aet_magic_count1(void) {
-	aet_ctrl->tracked_aet_magic_count1++;
-}
-
-void add_tracked_aet_magic_count2(void) {
-	aet_ctrl->tracked_aet_magic_count2++;
+void add_tracked_aet_magic_count(void) {
+	aet_ctrl->tracked_aet_magic_count++;
 }
 
 void add_page_fault_count(void) {

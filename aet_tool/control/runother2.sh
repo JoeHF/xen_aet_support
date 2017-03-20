@@ -1,10 +1,10 @@
-sh run_fake_pmu.sh fullsoplex
-sleep 10
-sh run_fake_pmu.sh fullcalculix 
-sleep 10
-sh run_fake_pmu.sh fullhmmer
-sleep 10
-sh run_fake_pmu.sh fullsjeng 
+#sh run_fake_pmu.sh fullsoplex
+#sleep 10
+#sh run_fake_pmu.sh fullcalculix 
+#sleep 10
+#sh run_fake_pmu.sh fullhmmer
+#sleep 10
+#sh run_fake_pmu.sh fullsjeng 
 sleep 10
 sh run_fake_pmu.sh fulllib 
 sleep 10
