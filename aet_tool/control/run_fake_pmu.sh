@@ -93,7 +93,7 @@ run_spec() {
 	if [ ! -d "./temp/$benchmark" ] ; then
 		mkdir -p ./temp/$benchmark
 	fi
-	mv 148* ./temp/$benchmark
+	mv 149* ./temp/$benchmark
 	echo "cmp_wss:"
 	python cmp_wss.py $benchmark
 	echo "test:"

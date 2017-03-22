@@ -1,0 +1,400 @@
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan
+dT:0 sum:0.0000000000
+-nan

@@ -1,7 +1,7 @@
 import os,sys
 import matplotlib.pyplot as plt
 
-bench_range = {"fullmcf":2000, "fullastar":300, "fullbzip2":400, "fullbwaves":2000, "fullgcc":500, "fullmilc":1200, "fullzeusmp":800, "fullcactus":600, "fullgems":1000, "fulllbm":600, "fullsoplex":400, "fullcalculix":100, "fullhmmer":100, "fullsjeng":300, "fulllib":100, "fullh264":100, "fulltonto":100, "fullomnetpp":200, "fullsphinx3":100}
+bench_range = {"fullmcf":2000, "fullastar":300, "fullbzip2":400, "fullbwaves":2000, "fullgcc":500, "fullmilc":1200, "fullzeusmp":800, "fullcactus":600, "fullgems":1000, "fulllbm":600, "fullsoplex":400, "fullcalculix":100, "fullhmmer":100, "fullsjeng":300, "fulllib":100, "fullh264":100, "fulltonto":100, "fullomnetpp":200, "fullsphinx3":100, "fakestage":1100}
 if len(sys.argv) != 2:
 	print "not enough parameter!"
 	sys.exit()
@@ -16,7 +16,7 @@ err_rate_file = open("./temp/" + benchmark + "/" + "tmp.txt", "a")
 range_limit = 20 
 err_rate_all = 0
 dis = 10
-start = 20
+start = 10
 for i in range(0, range_limit):
 	lru_wss = []
 	aet_wss = []
@@ -88,9 +88,12 @@ for i in range(0, range_limit):
 			aet_wss_adjust.append(aet_wss[j])
 	"""		
 
-	xx = [x*15 for x in range(1 , len(lru_wss) + 1)]
+	xx = [x*10 for x in range(1 , len(lru_wss) + 1)]
 
 	fig = plt.figure()
+	wss_curve = open("./temp/" + benchmark + "/" + str(thresh) + ".txt", "w")
+	[wss_curve.writelines(str(y) + "\n") for y in aet_wss]
+	wss_curve.close()
 	plt.plot(a_x, aet_wss, 'r.-', label="aet_wss")
 	plt.title("WSS")
 	#plt.ylim(0, int(y_max * 1.5))

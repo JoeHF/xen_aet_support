@@ -47,10 +47,32 @@ static void lru_process(unsigned long lru_hist_[], unsigned long cold_miss) {
 	fclose(lru_mcf);
 }
 
+static void set_track_rate(int track_rate) { 
+	printf("option old track_rate:%d new track_rate:%d\n", aet_ctrl->track_rate, track_rate);	
+	aet_ctrl->track_rate = track_rate;
+	aet_ctrl->hot_set_size = DEFAULT_HOT_SET_SIZE / aet_ctrl->track_rate;
+	printf("hot set size:%d\n", aet_ctrl->hot_set_size);
+}
+
+static void dynamic_track_rate(unsigned long mem_diff, unsigned long pf_diff) { 
+	printf("dynamic track rate mem diff:%lu pf diff:%lu pf ps:%lu\n", mem_diff, pf_diff, pf_diff / 10);
+	unsigned long mem_pf_rate = mem_diff / pf_diff;
+	unsigned long pf_per_s = pf_diff / 10;
+	if (pf_per_s > 5000) { 
+		set_track_rate(aet_ctrl->track_rate * 2);
+		aet_ctrl->reset = 0;
+	}
+	else if (pf_per_s < 3000) { 
+		set_track_rate(aet_ctrl->track_rate / 2);
+		aet_ctrl->reset = 0;
+	}
+
+}
+
 static void aet_process(int dom, unsigned long n, int aet_time) {
 	gettimeofday(&start, &tz);
 
-    unsigned long long m = aet_ctrl->node_count_[dom] * TRACK_RATE;
+    unsigned long long m = aet_ctrl->node_count_[dom] * aet_ctrl->track_rate;
     unsigned long long tott = aet_ctrl->tot_ref_[dom];
 	if (aet_ctrl->reset == 1)
 		aet_ctrl->reset = 0;
@@ -79,6 +101,10 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	aet_ctrl->longest_aet_hist_pos[dom] = 0;
 	memset(aet_ctrl->aet_hist_, 0, sizeof(aet_ctrl->aet_hist_));
 	memset(aet_ctrl->lru_hist_, 0, sizeof(aet_ctrl->lru_hist_));
+	unsigned long mem_diff = aet_ctrl->mem_now - aet_ctrl->mem_last;
+	unsigned long pf_diff = aet_ctrl->track_fault_time - aet_ctrl->track_fault_time_last;
+	aet_ctrl->mem_last = aet_ctrl->mem_now;
+	aet_ctrl->track_fault_time_last = aet_ctrl->track_fault_time;
 	/*	
 	if (aet_time % 3 == 0)
 		aet_ctrl->reset = 0;
@@ -90,6 +116,8 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 		return;
 	}
 
+	printf("------\n");
+	dynamic_track_rate(mem_diff, pf_diff);
 	/*
 	if (aet_ctrl->sleep == 0) { 
 		printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
@@ -152,7 +180,6 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
     //double N = tott + 1.0 * tott / (n-m) * m;
 	//double N = (double)tott + (double)cold_miss;
 	
-	printf("------\n");
 	printf("start:%d\n", start.tv_sec);
 	printf("lru_list_pos:%d lru cold miss:%lu\n", aet_ctrl->lru_list_pos, lru_cold_miss);
 	printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
@@ -259,7 +286,8 @@ void print(int arg) {
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict1:%llu hash conflict2:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num1, aet_ctrl->hash_conflict_num2, aet_ctrl->vmexit_num);
-		printf("add to all sl1mfn time:%lus track aet time:%lus\n", aet_ctrl->add_to_all_sl1mfn_time / 1000000, aet_ctrl->track_aet_time / 10000000);
+		printf("add to all sl1mfn time:%lus track aet time:%lus rand_track_time:%lus rand_track_num:%lu\n", aet_ctrl->add_to_all_sl1mfn_time / 1000000, aet_ctrl->track_aet_time / 10000000, aet_ctrl->rand_track_time / 1000000, aet_ctrl->rand_track_num);
+		printf("sample rate:%d\n", aet_ctrl->track_rate);
 	}
 	
 	if (arg == 1) {
@@ -311,11 +339,17 @@ void reset() {
 	aet_ctrl->hash_conflict_num2 = 0;
 	aet_ctrl->set_pending_page_num = 0;
 	aet_ctrl->sl1mfn_num = 0;
+	aet_ctrl->last_set_sl1mfn_num = 0;
+	aet_ctrl->last_two_set_sl1mfn_num = 0;
 	aet_ctrl->set_sl1mfn_page_num = 0;
 	aet_ctrl->set_num = 0;
 	aet_ctrl->vmexit_num = 0;
 	aet_ctrl->mem_now = 0;
 	aet_ctrl->mem_last = 0;
+	aet_ctrl->track_fault_time = 0;
+	aet_ctrl->track_fault_time_last = 0;
+	aet_ctrl->rand_track_time = 0;
+	aet_ctrl->rand_track_num = 0;
 	aet_ctrl->dtlb_miss_now = 0;
 	aet_ctrl->dtlb_miss_last = 0;
 	aet_ctrl->hot_set_time = 0;
@@ -343,9 +377,10 @@ int main(int argc, char** argv) {
 	int ch;
 	int do_aet = 0;
 	int aet_time = 0;
+	int track_rate = 1;
 	unsigned long n;
 	//printf("----------\nstart:\n");
-	while ((ch = getopt(argc, argv, "s:rc:l:t:")) != -1) {
+	while ((ch = getopt(argc, argv, "s:rc:l:t:x:")) != -1) {
 		switch (ch) {
 			case 's':
 				printf("option s:%s\n", optarg);
@@ -367,6 +402,10 @@ int main(int argc, char** argv) {
 			case 'l':
 				limit = atoi(optarg);
 				//printf("option l limit:%d\n", limit);
+				break;
+			case 'x':
+				track_rate = atoi(optarg);
+				set_track_rate(track_rate);
 				break;
 			default:
 				break;

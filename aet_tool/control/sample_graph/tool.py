@@ -6,10 +6,12 @@ import xlrd
 
 class SampleTool:
 	def __init__(self):
-		self.data = xlrd.open_workbook('aet_sample_result.xlsx')
-		self.benchmark_map = {'mcf': 1, 'milc': 2, 'zeusmp': 3, 'cactus': 4, 'gems': 5, 'lbm': 6, 'soplex': 7, 'sjeng': 8, 'omnetpp': 9}
-		self.valid_sheets = range(1, 6)
-		self.sample_rate = [8, 16, 32, 64, 128]
+		self.data = xlrd.open_workbook('aet_sample_result_1.xlsx')
+		#self.benchmark_map = {'mcf': 1, 'milc': 2, 'zeusmp': 3, 'cactus': 4, 'gems': 5, 'lbm': 6, 'soplex': 7, 'sjeng': 8, 'omnetpp': 9}
+		self.benchmark_map = {}
+		sample_rate_num = 10
+		self.valid_sheets = range(0, sample_rate_num)
+		self.sample_rate = [x * 8 for x in range(1, sample_rate_num + 1)]
 		# 获得标题 
 		self.column_map = {}
 		table = self.data.sheets()[1]
@@ -17,7 +19,13 @@ class SampleTool:
 			row_values = table.row_values(0)
 			self.column_map[row_values[i]] = i
 
+		nrows = table.nrows
+		for i in range(1, nrows):
+			row_values = table.row_values(i)
+			self.benchmark_map[row_values[0]] = i
+			
 		print self.column_map	
+		print self.benchmark_map
 	
 	def read_benchmark(self, benchmark_name):
 		result = []
@@ -39,3 +47,10 @@ class SampleTool:
 
 		return column_result	
 
+	def read_benchmark_name(self):
+		return self.benchmark_map.keys()
+
+	def read_sample_rate(self):
+		return self.sample_rate
+
+		#self.sample_rate = [8, 16, 32, 64, 128]

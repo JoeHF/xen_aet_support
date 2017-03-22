@@ -8,7 +8,7 @@
 #define LRU_FLAG 0
 #define SAMPLE_FLAG 1
 
-#define TRACK_RATE 16
+#define DEFAULT_TRACK_RATE 1 
 #define TLB_ENTRIES 512
 #define MAX_DOM_NR 2
 #define MAX_PAGE_NUM 50000
@@ -132,6 +132,7 @@ struct AET_ctrl {
 	struct last_pte lps[HOT_SET_SIZE];
 	unsigned long sl4mfn_;
 	enum TRACK track_;
+	int track_rate;
 	/* aet related data structure */
 	unsigned long aet_hist_[MAX_DOM_NR][MAX_PAGE_NUM];	
 	int longest_aet_hist_pos[MAX_DOM_NR];
@@ -146,6 +147,8 @@ struct AET_ctrl {
 	/* add to pending set */
 	unsigned long set_num;
 	int sl1mfn_num;
+	int last_two_set_sl1mfn_num;
+	int last_set_sl1mfn_num;
 	int last_sl1mfn_num;
 	int sl1mfn_start;
 	struct pending_node all_sl1mfn[MAX_PENDING_PAGE];
@@ -160,6 +163,7 @@ struct AET_ctrl {
 	unsigned long mem_now;
 	unsigned long mem_last;
 	unsigned long track_fault_time;
+	unsigned long track_fault_time_last;
 	/* for debug*/
 	int last_set_num;
 	/* hot set related data structrue */
@@ -186,6 +190,8 @@ struct AET_ctrl {
 	unsigned long add_to_all_sl1mfn_time;
 	unsigned long track_aet_time;
 	unsigned long aet_func_num;
+	unsigned long rand_track_time;
+	unsigned long rand_track_num;
 	unsigned long add_to_hot_set_num;
 };
 
