@@ -51,7 +51,7 @@ static void lru_process(unsigned long lru_hist_[], unsigned long cold_miss) {
 static void set_track_rate(int track_rate) { 
 	printf("option old track_rate:%d new track_rate:%d\n", aet_ctrl->track_rate, track_rate);	
 	aet_ctrl->track_rate = track_rate;
-	aet_ctrl->hot_set_size = DEFAULT_HOT_SET_SIZE / aet_ctrl->track_rate;
+	//aet_ctrl->hot_set_size = DEFAULT_HOT_SET_SIZE / aet_ctrl->track_rate;
 	printf("hot set size:%d\n", aet_ctrl->hot_set_size);
 }
 

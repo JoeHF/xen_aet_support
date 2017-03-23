@@ -9,7 +9,8 @@ if len(sys.argv) != 2:
 
 benchmark = sys.argv[1]
 #sample_rate_list = [x * 8 for x in range(1, 11)]
-sample_rate_list = [x * 16 for x in range(1, 6)]
+#sample_rate_list = [x * 64 for x in range(0, 2)]
+sample_rate_list = [1, 64, 128, 256, 512, 1024]
 print sample_rate_list
 dis = 10
 start = 10

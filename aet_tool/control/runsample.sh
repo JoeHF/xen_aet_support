@@ -3,7 +3,7 @@ benchmark=("fullgems" "fullmilc" "fullmcf" "fullcactus" "fullsoplex" "fakestage"
 for bench in ${benchmark[*]}
 do
 	echo $bench
-	for i in $(seq 1 1)
+	for i in $(seq 1 2)
 	do
 		echo $i
 		if [ $i -eq 0 ] ; then
