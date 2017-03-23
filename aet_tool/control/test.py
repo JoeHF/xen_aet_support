@@ -39,7 +39,7 @@ sender = 'from@runoob.com'
 receivers = ['707980114@qq.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
 
 output = output.split()
-tot = 0
+tot = 100
 count = 0
 for pic in output:
 	if ".png" in pic and "lru" not in pic:

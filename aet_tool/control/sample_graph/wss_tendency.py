@@ -20,6 +20,8 @@ for i in range(0, 20):
 	plt.title("wss tendency graph")
 	thresh = 0.01 * (i + 1)
 	for sample_rate in sample_rate_list: 
+		if sample_rate == 0:
+			sample_rate = 1;
 		cmd = "ls /new2/temp_sample_{0}/{1}".format(sample_rate, benchmark)
 		output = os.popen(cmd)
 		output = output.read()
@@ -60,7 +62,7 @@ for i in range(0, 20):
 		plt.plot(a_x, aet_wss, '.-' , label="1/" + str(sample_rate))
 	plt.ylim(0, bench_range[benchmark])	
 	plt.legend()
-	plt.savefig("./pic/" + str(thresh) + "_wss_tendency.png")	
+	plt.savefig("./pic/" + benchmark + "_" + str(thresh) + "_wss_tendency.png")	
 	plt.close()
 
 

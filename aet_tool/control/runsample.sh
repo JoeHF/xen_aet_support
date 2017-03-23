@@ -1,14 +1,15 @@
-benchmark=("fakestage")
+./xc -x 8
+benchmark=("fullgems" "fullmilc" "fullmcf" "fullcactus" "fullsoplex" "fakestage")
 for bench in ${benchmark[*]}
 do
 	echo $bench
-	for i in $(seq 0 0)
+	for i in $(seq 1 1)
 	do
 		echo $i
 		if [ $i -eq 0 ] ; then
 			sample_rate=1
 		else
-			sample_rate=$(($i*16))
+			sample_rate=$(($i*64))
 		fi
 		echo $sample_rate
 		./xc -x $sample_rate

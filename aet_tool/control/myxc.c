@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
+#include <math.h>
 
 double thresh_hold = 1;
 int limit = 2000;
@@ -58,8 +59,12 @@ static void dynamic_track_rate(unsigned long mem_diff, unsigned long pf_diff) {
 	printf("dynamic track rate mem diff:%lu pf diff:%lu pf ps:%lu\n", mem_diff, pf_diff, pf_diff / 10);
 	unsigned long mem_pf_rate = mem_diff / pf_diff;
 	unsigned long pf_per_s = pf_diff / 10;
-	if (pf_per_s > 5000) { 
-		set_track_rate(aet_ctrl->track_rate * 2);
+	int r;
+	int upper_bound = 5000;
+	int lower_bound = 1000;
+	if (pf_per_s > upper_bound) { 
+		r = (int)(log(pf_per_s / upper_bound) / log(2));
+		set_track_rate(aet_ctrl->track_rate * pow(2, r));
 		aet_ctrl->reset = 0;
 	}
 	else if (pf_per_s < 3000) { 
@@ -117,7 +122,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	}
 
 	printf("------\n");
-	dynamic_track_rate(mem_diff, pf_diff);
+	//dynamic_track_rate(mem_diff, pf_diff);
 	/*
 	if (aet_ctrl->sleep == 0) { 
 		printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
