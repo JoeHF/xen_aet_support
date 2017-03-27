@@ -35,7 +35,7 @@ message['Subject'] = Header(subject, 'utf-8')
 
 #邮件正文内容
 message.attach(MIMEText(content, 'plain', 'utf-8'))
-sender = 'from@runoob.com'
+sender = 'from@106.com'
 receivers = ['707980114@qq.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
 
 output = output.split()

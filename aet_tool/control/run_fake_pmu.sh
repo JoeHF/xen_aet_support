@@ -17,7 +17,7 @@ cpu_bind() {
 	dom0_cpu3=3
 	dom0_cpu4=4
 	domu_cpu=1
-	xl vcpu-set 0 4
+	xl vcpu-set 0 3
 	xl vcpu-pin 0 0 $dom0_cpu1
 	xl vcpu-pin 0 1 $dom0_cpu2
 	xl vcpu-pin 0 2 $dom0_cpu3

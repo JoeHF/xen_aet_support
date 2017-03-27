@@ -31,7 +31,8 @@ init() {
 	xl dm -c >> /dev/null
 	$XC_DIR/xc -r
 	$XC_DIR/xc -s 0 > tmp.txt
-	PF1=`cat tmp.txt | grep "page fault" | awk -F ':' '{print $2}'`
+	PF1=`cat tmp.txt | grep "page fault" | awk -F ':' '{print $2}' | awk '{print $1}'`
+	
 	echo "------------"
 }
 
@@ -56,7 +57,7 @@ stop_monitor() {
 	`$PMU_DIR/a.out 1 $domu_cpu 2 1`
 	$XC_DIR/xc -s 1 > tmp.txt
 	cat tmp.txt
-	PF2=`cat tmp.txt | grep "page fault" | awk -F ':' '{print $2}'`
+	PF2=`cat tmp.txt | grep "page fault" | awk -F ':' '{print $2}' | awk '{print $1}'`
 	PFN=$(($PF2-$PF1))
 	echo "page fault count:$PFN"
 	echo "------------"

@@ -6,16 +6,17 @@ import xlrd
 
 class SampleTool:
 	def __init__(self):
-		self.data = xlrd.open_workbook('aet_sample_result_1.xlsx')
+		self.data = xlrd.open_workbook('aet_sample_new_without_full.xlsx')
 		#self.benchmark_map = {'mcf': 1, 'milc': 2, 'zeusmp': 3, 'cactus': 4, 'gems': 5, 'lbm': 6, 'soplex': 7, 'sjeng': 8, 'omnetpp': 9}
 		self.benchmark_map = {}
-		sample_rate_num = 10
+		sample_rate_num = 5 
 		self.valid_sheets = range(0, sample_rate_num)
-		self.sample_rate = [x * 8 for x in range(1, sample_rate_num + 1)]
+		#self.sample_rate = [x * 8 for x in range(1, sample_rate_num + 1)]
+		self.sample_rate = [64, 128, 256, 512, 1024]
 		# 获得标题 
 		self.column_map = {}
 		table = self.data.sheets()[1]
-		for i in range(1, 7):
+		for i in range(1, 8):
 			row_values = table.row_values(0)
 			self.column_map[row_values[i]] = i
 

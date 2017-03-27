@@ -22,6 +22,34 @@ class SampleGraph:
 		plt.savefig("pic/" + "overhead_tendency" + ".png")
 		plt.close()
 
+	def draw_pf_ps_tendency(self):
+		fig = plt.figure()
+		plt.title("page fault per second tendency")
+		for i in range(len(self.benchmark)):
+			x_axis = self.sample_tool.read_sample_rate()
+			y_axis = self.sample_tool.read_column(self.benchmark[i], "pf per second")
+			plt.plot(x_axis, y_axis, '.-', label = self.benchmark[i])
+			plt.xlabel("sample rate")
+			plt.ylabel("page fault num per second")
+		plt.legend()	
+		plt.savefig("pic/" + "pf_ps_tendency" + ".png")
+		plt.close()
+
+	def draw_pf_rate_tendency(self):
+		fig = plt.figure()
+		plt.title("page fault rate tendency")
+		for i in range(len(self.benchmark)):
+			x_axis = self.sample_tool.read_sample_rate()
+			y_axis = self.sample_tool.read_column(self.benchmark[i], "pf rate")
+			plt.plot(x_axis, y_axis, '.-', label = self.benchmark[i])
+			plt.xlabel("sample rate")
+			plt.ylabel("pf rate mem/pf")
+		plt.legend()	
+		plt.savefig("pic/" + "pf_rate_tendency" + ".png")
+		plt.close()
+
+
+
 	def draw_all_pf_overhead_pic(self):
 		fig = plt.figure()
 		plt.title("pf_rate overhead relationship")
@@ -57,12 +85,16 @@ class SampleGraph:
 		plt.savefig("pic/" + benchmark_name + "_pf_overhead.png")
 		plt.close()
 
+
+
 	
 
 sample_graph = SampleGraph()
 #sample_graph.draw_pf_overhead_pic("cactus")
 #sample_graph.draw_all_pf_overhead_pic()
 sample_graph.draw_overhead_tendency()
+sample_graph.draw_pf_ps_tendency()
+sample_graph.draw_pf_rate_tendency()
 
 
 
