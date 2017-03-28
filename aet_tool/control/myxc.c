@@ -115,13 +115,13 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	char lru_hist_file_name[30];
 	char sl1mfn_file_name[30];
 	FILE *mcf, *aef, *lruf;
-	FILE *sl1mfnf;
+	//FILE *sl1mfnf;
 	sprintf(aet_hist_file_name, "%d_aet_hist.txt", start.tv_sec);
 	sprintf(lru_hist_file_name, "%d_lru_hist.txt", start.tv_sec);
 	sprintf(sl1mfn_file_name, "sl1mfn_%d.txt", start.tv_sec);
 	aef = fopen(aet_hist_file_name, "w");
 	lruf = fopen(lru_hist_file_name, "w");
-	sl1mfnf = fopen(sl1mfn_file_name, "w");
+	//sl1mfnf = fopen(sl1mfn_file_name, "w");
 	/*
 	for (int i = 0 ; i < HASH ; i++) { 
 		for (int j = 0 ; j < HASH_CONFLICT_NUM ; j++) { 
@@ -135,7 +135,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 		fprintf(sl1mfnf, "i:%d %lu\n", i, aet_ctrl->all_sl1mfn[i].sl1mfn);
 	}
 	*/
-	fclose(sl1mfnf);
+	//fclose(sl1mfnf);
 	/*	
 	if (aet_time % 3 == 0)
 		aet_ctrl->reset = 0;
