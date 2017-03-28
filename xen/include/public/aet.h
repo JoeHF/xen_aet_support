@@ -93,10 +93,12 @@ struct hash_node {
 	int track_time;
 	int sl1mfn;
 	int sl1mfn_pos;
+	int sl1mfn_hash;
 };
 
 struct hot_set_member { 
 	int sl1mfn_id;
+	int sl1mfn_id_hash;
 	int sl1mfn_pos_id;
 	unsigned long mfn;
 };
@@ -142,8 +144,11 @@ struct AET_ctrl {
 
 	unsigned long node_count_[MAX_DOM_NR];
 	struct hash_node hns_[MAX_DOM_NR][HASH][HASH_CONFLICT_NUM];
+	struct pending_node all_sl1mfn_hash[HASH][HASH_CONFLICT_NUM];
 	unsigned long hash_conflict_num1;
 	unsigned long hash_conflict_num2;
+
+
 	/* add to pending set */
 	unsigned long set_num;
 	int sl1mfn_num;
@@ -151,7 +156,7 @@ struct AET_ctrl {
 	int last_set_sl1mfn_num;
 	int last_sl1mfn_num;
 	int sl1mfn_start;
-	struct pending_node all_sl1mfn[MAX_PENDING_PAGE];
+	/* struct pending_node all_sl1mfn[MAX_PENDING_PAGE]; */
 	unsigned long set_sl1mfn_page_num;
 	unsigned long set_pending_page_num;
 	/* The following variable is used by iss16*/
@@ -193,6 +198,7 @@ struct AET_ctrl {
 	unsigned long rand_track_time;
 	unsigned long rand_track_num;
 	unsigned long add_to_hot_set_num;
+	int add_to_sl1mfn_fail;
 };
 
 void aet_init(void);

@@ -110,6 +110,32 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	unsigned long pf_diff = aet_ctrl->track_fault_time - aet_ctrl->track_fault_time_last;
 	aet_ctrl->mem_last = aet_ctrl->mem_now;
 	aet_ctrl->track_fault_time_last = aet_ctrl->track_fault_time;
+	char miss_curve_file_name[30];
+	char aet_hist_file_name[30];
+	char lru_hist_file_name[30];
+	char sl1mfn_file_name[30];
+	FILE *mcf, *aef, *lruf;
+	FILE *sl1mfnf;
+	sprintf(aet_hist_file_name, "%d_aet_hist.txt", start.tv_sec);
+	sprintf(lru_hist_file_name, "%d_lru_hist.txt", start.tv_sec);
+	sprintf(sl1mfn_file_name, "sl1mfn_%d.txt", start.tv_sec);
+	aef = fopen(aet_hist_file_name, "w");
+	lruf = fopen(lru_hist_file_name, "w");
+	sl1mfnf = fopen(sl1mfn_file_name, "w");
+	/*
+	for (int i = 0 ; i < HASH ; i++) { 
+		for (int j = 0 ; j < HASH_CONFLICT_NUM ; j++) { 
+			if (aet_ctrl->all_sl1mfn_hash[i][j].sl1mfn != 0)
+				fprintf(sl1mfnf, "i:%d j:%d %lu\n", i, j, aet_ctrl->all_sl1mfn_hash[i][j].sl1mfn);	
+		}
+	}
+	*/
+	/*
+	for (int i = aet_ctrl->sl1mfn_num - 1 ; i >= 0 ; i--) { 
+		fprintf(sl1mfnf, "i:%d %lu\n", i, aet_ctrl->all_sl1mfn[i].sl1mfn);
+	}
+	*/
+	fclose(sl1mfnf);
 	/*	
 	if (aet_time % 3 == 0)
 		aet_ctrl->reset = 0;
@@ -137,14 +163,25 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	}
 	*/
     
+	/*
 	char miss_curve_file_name[30];
 	char aet_hist_file_name[30];
 	char lru_hist_file_name[30];
+	char sl1mfn_file_name[30];
 	FILE *mcf, *aef, *lruf;
+	FILE *sl1mfnf;
 	sprintf(aet_hist_file_name, "%d_aet_hist.txt", start.tv_sec);
 	sprintf(lru_hist_file_name, "%d_lru_hist.txt", start.tv_sec);
+	sprintf(sl1mfn_file_name, "sl1mfn_%d.txt", start.tv_sec);
 	aef = fopen(aet_hist_file_name, "w");
 	lruf = fopen(lru_hist_file_name, "w");
+	sl1mfnf = fopen(sl1mfn_file_name, "w");
+	for (int i = aet_ctrl->sl1mfn_num - 1 ; i >= 0 ; i--) { 
+		fprintf(sl1mfnf, "i:%d %lu\n", i, aet_ctrl->all_sl1mfn[i]);
+	}
+	fclose(sl1mfnf);
+	*/
+
     if (n != 0) { 
 		mcf	= fopen("miss_curve.txt","w");
 		printf("old miss curve file name\n");
@@ -291,7 +328,7 @@ void print(int arg) {
 		printf("user mode:%lu reserved bit:%lu both:%lu\n", aet_ctrl->user_mode_fault, aet_ctrl->reserved_bit_fault, aet_ctrl->both_fault);
 		printf("total count:%d set_pending_page_num:%lu all_sl1mfn_num:%d set sl1mfn page num:%lu\n", aet_ctrl->total_count, aet_ctrl->set_pending_page_num, aet_ctrl->sl1mfn_num, aet_ctrl->set_sl1mfn_page_num);
 		printf("hash conflict1:%llu hash conflict2:%llu vmexit_num:%lu\n", aet_ctrl->hash_conflict_num1, aet_ctrl->hash_conflict_num2, aet_ctrl->vmexit_num);
-		printf("add to all sl1mfn time:%lus track aet time:%lus rand_track_time:%lus rand_track_num:%lu\n", aet_ctrl->add_to_all_sl1mfn_time / 1000000, aet_ctrl->track_aet_time / 10000000, aet_ctrl->rand_track_time / 1000000, aet_ctrl->rand_track_num);
+		printf("add to all sl1mfn time:%lus track aet time:%lus rand_track_time:%lus rand_track_num:%lu add_to_all_sl1mfn fail:%d\n", aet_ctrl->add_to_all_sl1mfn_time / 1000000, aet_ctrl->track_aet_time / 10000000, aet_ctrl->rand_track_time / 1000000, aet_ctrl->rand_track_num, aet_ctrl->add_to_sl1mfn_fail);
 		printf("sample rate:%d\n", aet_ctrl->track_rate);
 	}
 	
@@ -366,6 +403,8 @@ void reset() {
 	aet_ctrl->sleep = 0;
 	aet_ctrl->track_fault_time = 0;
 	aet_ctrl->add_to_hot_set_time = 0;
+	aet_ctrl->add_to_sl1mfn_fail = 0;
+	memset(aet_ctrl->all_sl1mfn_hash, 0, sizeof(aet_ctrl->all_sl1mfn_hash));
 	memset(aet_ctrl->hot_set, 0, sizeof(aet_ctrl->hot_set));
 	//memset(aet_ctrl->valid_node_count, 0, sizeof(aet_ctrl->valid_node_count));
 	memset(aet_ctrl->hns_, 0, sizeof(aet_ctrl->hns_));
@@ -375,7 +414,6 @@ void reset() {
 	memset(aet_ctrl->tot_ref_, 0, sizeof(aet_ctrl->tot_ref_));
 	memset(aet_ctrl->lps, 0, sizeof(aet_ctrl->lps));
 	memset(aet_ctrl->tvs, 0, sizeof(aet_ctrl->tvs));
-	memset(aet_ctrl->all_sl1mfn, 0, sizeof(aet_ctrl->all_sl1mfn));
 }
 
 int main(int argc, char** argv) {
