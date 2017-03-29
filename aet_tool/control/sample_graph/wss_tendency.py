@@ -10,21 +10,23 @@ if len(sys.argv) != 2:
 benchmark = sys.argv[1]
 #sample_rate_list = [x * 8 for x in range(1, 11)]
 #sample_rate_list = [x * 64 for x in range(0, 2)]
-#sample_rate_list = [1, 64, 128, 256, 512]
-sample_rate_list = [1, 64]
+sample_rate_list = [64, 128, 256, 512]
+#sample_rate_list = [1, 64]
 print sample_rate_list
 dis = 10
 start = 10
 thresh = 0.01
 
+hot_set_size = 64 
 for i in range(0, 20):
 	fig = plt.figure()
 	plt.title("wss tendency graph")
 	thresh = 0.01 * (i + 1)
+	base_xsize = 0
 	for sample_rate in sample_rate_list: 
 		if sample_rate == 0:
 			sample_rate = 1;
-		cmd = "ls /new2/temp_sample_{0}/{1}".format(sample_rate, benchmark)
+		cmd = "ls /new2/temp_hot_set_fixed_{2}/temp_sample_{0}/{1}".format(sample_rate, benchmark, hot_set_size)
 		output = os.popen(cmd)
 		output = output.read()
 
@@ -39,7 +41,7 @@ for i in range(0, 20):
 		for file in output:
 			if "miss_curve" in file and "png" not in file:
 				ax += dis
-				fo = open("/new2/temp_sample_" + str(sample_rate) + "/" + benchmark + "/" + file)
+				fo = open("/new2/temp_hot_set_fixed_" + str(hot_set_size) + "/temp_sample_" + str(sample_rate) + "/" + benchmark + "/" + file)
 				wss = 0
 				odd = 0
 				for line in fo.readlines():
@@ -61,6 +63,14 @@ for i in range(0, 20):
 					a_wss = wss
 					aet_wss.append(a_wss) 
 			
+		if base_xsize == 0:
+			base_xsize = a_x[-1]
+			#print base_xsize
+
+		enlarge = base_xsize / a_x[-1]
+		#print "thresh:{0} {1}".format(a_x[-1], enlarge)
+		a_x = [x * enlarge for x in a_x]
+		#print a_x[-1]
 		plt.plot(a_x, aet_wss, '.-' , label="1/" + str(sample_rate))
 	plt.ylim(0, bench_range[benchmark])	
 	plt.legend()
