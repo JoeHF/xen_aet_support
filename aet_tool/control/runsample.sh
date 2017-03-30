@@ -1,12 +1,13 @@
 ./xc -x 8
 #benchmark=("fullgems" "fullmilc" "fullmcf" "fullcactus" "fullsoplex" "fakestage")
-benchmark=("fullmilc")
-hss=256
+benchmark=("fullcactus")
+hss=64
+echo "hss is $hss!!!!!!!!!!"
 for bench in ${benchmark[*]}
 do
-	sample_rate=32
+	sample_rate=256
 	echo $bench
-	for i in $(seq 1 4)
+	for i in $(seq 1 1)
 	do
 		echo $i
 		if [ $i -eq 0 ] ; then

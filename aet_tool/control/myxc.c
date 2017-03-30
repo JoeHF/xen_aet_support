@@ -422,8 +422,9 @@ int main(int argc, char** argv) {
 	int aet_time = 0;
 	int track_rate = 1;
 	unsigned long n;
+	int hss;
 	//printf("----------\nstart:\n");
-	while ((ch = getopt(argc, argv, "s:rc:l:t:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "s:rc:l:t:x:h:")) != -1) {
 		switch (ch) {
 			case 's':
 				printf("option s:%s\n", optarg);
@@ -449,6 +450,11 @@ int main(int argc, char** argv) {
 			case 'x':
 				track_rate = atoi(optarg);
 				set_track_rate(track_rate);
+				break;
+			case 'h':
+				hss = atoi(optarg);
+				aet_ctrl->hot_set_size = hss;
+				printf("modify hss:%d\n", hss);
 				break;
 			default:
 				break;
