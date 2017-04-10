@@ -91,7 +91,7 @@ for i in range(0, 20):
 		ax.set_title(col, size=15)
 	 
 	for ax, row in zip(axes[:,0], ['hss_64', 'hss_128', 'hss_256']):
-		ax.set_ylabel(row, size=15, rotation=0, labelpad=25)			
+		ax.set_ylabel(row, size=15, rotation=0, labelpad=30)			
 	plt.savefig("./pic/" + benchmark + "_" + str(thresh) + "_wss_tendency.png")	
 	plt.close()
 

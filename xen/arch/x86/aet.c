@@ -787,6 +787,8 @@ static int rand_track_algorithm(int *hash_conflict, int flag) {
 	}
 
 	flush_tlb_local();
+	aet_ctrl->rand_chosen = rand_chosen;
+	aet_ctrl->rand_skip = rand_skip;
 	if (aet_ctrl->sl1mfn_num % 50 == 0) { 
 		printk("%s sl1mfn_num:%d invalid sl1mfn:%d already_set:%d\n", __func__, aet_ctrl->sl1mfn_num, invalid_sl1mfn, already_set);
 		printk("%s count:%d hash_conflict:%d rand_skip:%d/rand_chosen:%d\n", __func__, count, *hash_conflict, rand_skip, rand_chosen);

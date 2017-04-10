@@ -199,6 +199,8 @@ struct AET_ctrl {
 	unsigned long rand_track_num;
 	unsigned long add_to_hot_set_num;
 	int add_to_sl1mfn_fail;
+	int rand_chosen;
+	int rand_skip;
 };
 
 void aet_init(void);

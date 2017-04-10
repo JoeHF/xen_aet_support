@@ -1,7 +1,7 @@
 import os,sys
 import matplotlib.pyplot as plt
 
-bench_range = {"fullmcf":2000, "fullastar":300, "fullbzip2":400, "fullbwaves":2000, "fullgcc":500, "fullmilc":1200, "fullzeusmp":800, "fullcactus":600, "fullgems":1000, "fulllbm":600, "fullsoplex":400, "fullcalculix":100, "fullhmmer":100, "fullsjeng":300, "fulllib":100, "fullh264":100, "fulltonto":100, "fullomnetpp":200, "fullsphinx3":100, "fakestage":1000}
+bench_range = {"fullmcf":2000, "fullastar":300, "fullbzip2":400, "fullbwaves":2000, "fullgcc":500, "fullmilc":600, "fullzeusmp":800, "fullcactus":600, "fullgems":1000, "fulllbm":600, "fullsoplex":400, "fullcalculix":100, "fullhmmer":100, "fullsjeng":300, "fulllib":100, "fullh264":100, "fulltonto":100, "fullomnetpp":200, "fullsphinx3":100, "fakestage":1000}
 if len(sys.argv) != 2:
 	print "not enough parameter!"
 	sys.exit()
@@ -15,7 +15,7 @@ output = output.split()
 err_rate_file = open("./temp/" + benchmark + "/" + "tmp.txt", "a")
 range_limit = 20 
 err_rate_all = 0
-dis = 10
+dis = 2 
 start = 10
 for i in range(0, range_limit):
 	lru_wss = []
@@ -32,6 +32,8 @@ for i in range(0, range_limit):
 	ax = start 
 	valid = 0
 	invalid = 0
+	t_r = []
+	v_r = []
 	for file in output:
 		if "miss_curve" in file and "png" not in file:
 			ax += dis 
@@ -48,13 +50,21 @@ for i in range(0, range_limit):
 			if line.strip('\n') == "-nan" or float(line) >= thresh:
 				a_skip += 1
 				invalid += 1
+				v_r.append(0)
 			else:	
+				v_r.append(1)
 				valid += 1
 				if wss > y_max:
 					y_max = wss
 				a_x.append(ax)
 				a_wss = wss
 				aet_wss.append(a_wss)
+	tro = open("./temp/" + benchmark + "/track_rate.txt")
+	k = 0
+	for line in tro.readlines():
+		if v_r[k] == 1:
+			t_r.append(int(line))
+		k += 1	
 
 	print "thresh:{2} aet valid/tot:{0}/{1} ymax:{3}".format(valid, valid + invalid, thresh, y_max)
 	#print "lru skip:{0} aet skip:{1}".format(l_skip, a_skip)
@@ -91,18 +101,23 @@ for i in range(0, range_limit):
 	xx = [x*10 for x in range(1 , len(lru_wss) + 1)]
 
 	fig = plt.figure()
+	plt.subplot(2, 1, 1)
 	wss_curve = open("./temp/" + benchmark + "/" + str(thresh) + ".txt", "w")
 	[wss_curve.writelines(str(y) + "\n") for y in aet_wss]
 	wss_curve.close()
-	plt.plot(a_x, aet_wss, 'r.-', label="aet_wss")
-	plt.title("WSS")
+	
+	plt.plot(a_x, aet_wss, 'r.-')
+	plt.ylabel("Wss(MB)")
+	plt.legend()
 	#plt.ylim(0, int(y_max * 1.5))
 	if bench_range.has_key(benchmark):
 		plt.ylim(0, bench_range[benchmark])
 	else:
 		plt.ylim(0, 2000)
+	plt.subplot(2, 1, 2)	
+	plt.plot(a_x, t_r, 'r.-')
 	plt.xlabel("Time(s)")
-	plt.ylabel("Wss(MB)")
+	plt.ylabel("Track Rate")
 	plt.legend()
 	plt.savefig("./temp/" + benchmark + "/" + str(thresh) + "_cmp_wss_" + benchmark + ".png")
 	plt.close('all')

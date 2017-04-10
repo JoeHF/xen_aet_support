@@ -57,11 +57,13 @@ static void set_track_rate(int track_rate) {
 
 static void dynamic_track_rate(unsigned long mem_diff, unsigned long pf_diff) { 
 	printf("dynamic track rate mem diff:%lu pf diff:%lu pf ps:%lu\n", mem_diff, pf_diff, pf_diff / 10);
+	printf("mem vs pf:%lf\n", (double)(mem_diff) / (double)(pf_diff));
 	unsigned long mem_pf_rate = mem_diff / pf_diff;
 	unsigned long pf_per_s = pf_diff / 10;
 	int r;
 	int upper_bound = 5000;
 	int lower_bound = 1000;
+	/*
 	if (pf_per_s > upper_bound) { 
 		r = (int)(log(pf_per_s / upper_bound) / log(2));
 		set_track_rate(aet_ctrl->track_rate * pow(2, r));
@@ -69,9 +71,17 @@ static void dynamic_track_rate(unsigned long mem_diff, unsigned long pf_diff) {
 	}
 	else if (pf_per_s < 3000) { 
 		set_track_rate(aet_ctrl->track_rate / 2);
+	}
+	*/
+
+	if (mem_diff < pf_diff * 100000) { 
+		set_track_rate(aet_ctrl->track_rate + 128);	
 		aet_ctrl->reset = 0;
 	}
-
+	else { 
+		aet_ctrl->rand_chosen = 0;
+		aet_ctrl->rand_skip = 0;
+	}
 }
 
 static void aet_process(int dom, unsigned long n, int aet_time) {
@@ -114,32 +124,15 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	char aet_hist_file_name[30];
 	char lru_hist_file_name[30];
 	char sl1mfn_file_name[30];
-	FILE *mcf, *aef, *lruf;
+	FILE *mcf, *aef, *lruf, *trf;
 	//FILE *sl1mfnf;
 	sprintf(aet_hist_file_name, "%d_aet_hist.txt", start.tv_sec);
 	sprintf(lru_hist_file_name, "%d_lru_hist.txt", start.tv_sec);
 	sprintf(sl1mfn_file_name, "sl1mfn_%d.txt", start.tv_sec);
+	trf = fopen("track_rate.txt", "a");
 	aef = fopen(aet_hist_file_name, "w");
 	lruf = fopen(lru_hist_file_name, "w");
-	//sl1mfnf = fopen(sl1mfn_file_name, "w");
-	/*
-	for (int i = 0 ; i < HASH ; i++) { 
-		for (int j = 0 ; j < HASH_CONFLICT_NUM ; j++) { 
-			if (aet_ctrl->all_sl1mfn_hash[i][j].sl1mfn != 0)
-				fprintf(sl1mfnf, "i:%d j:%d %lu\n", i, j, aet_ctrl->all_sl1mfn_hash[i][j].sl1mfn);	
-		}
-	}
-	*/
-	/*
-	for (int i = aet_ctrl->sl1mfn_num - 1 ; i >= 0 ; i--) { 
-		fprintf(sl1mfnf, "i:%d %lu\n", i, aet_ctrl->all_sl1mfn[i].sl1mfn);
-	}
-	*/
-	//fclose(sl1mfnf);
-	/*	
-	if (aet_time % 3 == 0)
-		aet_ctrl->reset = 0;
-	*/	
+
 	if (tott + cold_miss < 100) { 
 		aet_ctrl->reset = 0;
 		printf("------\n");
@@ -148,40 +141,12 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
 	}
 
 	printf("------\n");
-	//dynamic_track_rate(mem_diff, pf_diff);
-	/*
-	if (aet_ctrl->sleep == 0) { 
-		printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
-		//aet_ctrl->sleep = 1;
-	}
-	else { 
-		// force reset if running enough time
-		if (aet_time % 4 == 0) { 
-			aet_ctrl->sleep = 0;
-		}
-		return;
-	}
-	*/
-    
-	/*
-	char miss_curve_file_name[30];
-	char aet_hist_file_name[30];
-	char lru_hist_file_name[30];
-	char sl1mfn_file_name[30];
-	FILE *mcf, *aef, *lruf;
-	FILE *sl1mfnf;
-	sprintf(aet_hist_file_name, "%d_aet_hist.txt", start.tv_sec);
-	sprintf(lru_hist_file_name, "%d_lru_hist.txt", start.tv_sec);
-	sprintf(sl1mfn_file_name, "sl1mfn_%d.txt", start.tv_sec);
-	aef = fopen(aet_hist_file_name, "w");
-	lruf = fopen(lru_hist_file_name, "w");
-	sl1mfnf = fopen(sl1mfn_file_name, "w");
-	for (int i = aet_ctrl->sl1mfn_num - 1 ; i >= 0 ; i--) { 
-		fprintf(sl1mfnf, "i:%d %lu\n", i, aet_ctrl->all_sl1mfn[i]);
-	}
-	fclose(sl1mfnf);
-	*/
-
+	fprintf(trf, "%d\n", aet_ctrl->track_rate);
+	fclose(trf);
+	printf("start:%d\n", start.tv_sec);
+	printf("rand chosen/rand_skip:%d/%d\n", aet_ctrl->rand_chosen, aet_ctrl->rand_skip);
+	dynamic_track_rate(mem_diff, pf_diff);
+	
     if (n != 0) { 
 		mcf	= fopen("miss_curve.txt","w");
 		printf("old miss curve file name\n");
@@ -222,7 +187,7 @@ static void aet_process(int dom, unsigned long n, int aet_time) {
     //double N = tott + 1.0 * tott / (n-m) * m;
 	//double N = (double)tott + (double)cold_miss;
 	
-	printf("start:%d\n", start.tv_sec);
+	printf("track rate:%d\n", aet_ctrl->track_rate);
 	printf("lru_list_pos:%d lru cold miss:%lu\n", aet_ctrl->lru_list_pos, lru_cold_miss);
 	printf("sl1mfn_num:%d last_set_num:%d sleep:%d\n", aet_ctrl->sl1mfn_num, aet_ctrl->last_set_num, aet_ctrl->sleep);
 	lru_process(lru_hist_, lru_cold_miss);

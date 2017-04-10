@@ -1,27 +1,30 @@
 ./xc -x 8
-#benchmark=("fullgems" "fullmilc" "fullmcf" "fullcactus" "fullsoplex" "fakestage")
-benchmark=("fullcactus")
-hss=64
+benchmark=("fullgems" "fullmilc" "fullmcf" "fullcactus" "fullsoplex" "fakestage")
+#benchmark=("fulllbm" "fullsjeng" "fullomnetpp")
+#benchmark=("fullmilc")
+hss=0
 echo "hss is $hss!!!!!!!!!!"
 for bench in ${benchmark[*]}
 do
-	sample_rate=256
+	sample_rate=32
 	echo $bench
-	for i in $(seq 1 1)
+	for i in $(seq 0 0)
 	do
+		./xc -h 64
 		echo $i
 		if [ $i -eq 0 ] ; then
-			sample_rate=1
+			sample_rate=128
 		else
 			#sample_rate=$(($i*256))
 			sample_rate=$(($sample_rate*2))
+			#sample_rate=$(($sample_rate+256))
 		fi
 		echo $sample_rate
 		./xc -x $sample_rate
 		sh run_fake_pmu.sh $bench 
 		sleep 1
 		if [ ! -d "/new2/temp_hot_set_fixed_$hss/temp_sample_$sample_rate" ] ; then
-			mkdir "/new2/temp_hot_set_fixed_$hss/temp_sample_$sample_rate"
+			mkdir -p "/new2/temp_hot_set_fixed_$hss/temp_sample_$sample_rate"
 		fi	
 		rm -rf "/new2/temp_hot_set_fixed_$hss/temp_sample_$sample_rate/$bench"
 		mv "temp/$bench" "/new2/temp_hot_set_fixed_$hss/temp_sample_$sample_rate"

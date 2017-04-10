@@ -94,6 +94,7 @@ run_spec() {
 		mkdir -p ./temp/$benchmark
 	fi
 	mv 149* ./temp/$benchmark
+	mv track_rate.txt ./temp/$benchmark 
 	echo "cmp_wss:"
 	python cmp_wss.py $benchmark
 	echo "test:"

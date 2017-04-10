@@ -39,18 +39,21 @@ sender = 'from@106.com'
 receivers = ['707980114@qq.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
 
 output = output.split()
-tot = 100
+tot = 1
 count = 0
 for pic in output:
 	if ".png" in pic and "lru" not in pic:
 		#创建一个带附件的实例
 		#print pic
-		if "148" in pic:
+		if "149" in pic:
+			"""
 			count += 1
 			if count <= tot:
 				part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  
 				part.add_header('Content-Disposition', 'attachment', filename=pic)  
 				message.attach(part)  
+			"""
+			pass
 		else:
 			part = MIMEApplication(open("./temp/" + benchmark + "/" + pic,'rb').read())  
 			part.add_header('Content-Disposition', 'attachment', filename=pic)  
